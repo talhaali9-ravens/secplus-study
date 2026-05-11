@@ -12,6 +12,7 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { background: #080c14; overscroll-behavior: none; }
@@ -24,6 +25,15 @@
 
 <script type="text/babel">
 const { useState, useRef, useEffect } = React;
+
+/* ═══════════════════════════════════════════════
+   SUPABASE + STRIPE CONFIG
+   Replace placeholder values after setting up accounts
+═══════════════════════════════════════════════ */
+const SUPABASE_URL      = 'https://vxrxhvrlwwueoslsrkdv.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_3yETf2YNQEa2D-2_HsZrQQ_mIDkjS40';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/test_3cI00l5He5FWg0a5M50Ny00';
 
 /* ═══════════════════════════════════════════════
    TOKENS
@@ -1011,11 +1021,143 @@ function ExamApp() {
 }
 
 /* ═══════════════════════════════════════════════
+   AUTH MODAL
+═══════════════════════════════════════════════ */
+function AuthModal({ onClose }) {
+  const [mode, setMode]     = useState("login"); // "login" | "signup"
+  const [email, setEmail]   = useState("");
+  const [pass, setPass]     = useState("");
+  const [error, setError]   = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit(e) {
+    e.preventDefault();
+    setError(""); setLoading(true);
+    const { error: err } = mode === "login"
+      ? await supabase.auth.signInWithPassword({ email, password: pass })
+      : await supabase.auth.signUp({ email, password: pass });
+    setLoading(false);
+    if (err) { setError(err.message); return; }
+    onClose();
+  }
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(8,12,20,0.85)",zIndex:100,display:"flex",alignItems:"flex-end"}}>
+      <div style={{...panel,width:"100%",borderRadius:"12px 12px 0 0",padding:24}}>
+        <div style={{fontSize:13,fontWeight:700,color:C.bright,marginBottom:4}}>
+          {mode==="login"?"Sign In":"Create Free Account"}
+        </div>
+        <div style={{fontSize:10,color:C.muted,marginBottom:16}}>
+          {mode==="login"?"Access your account to unlock paid features":"Free account required to purchase full access"}
+        </div>
+        <form onSubmit={submit}>
+          <input type="email" placeholder="email@example.com" value={email} onChange={e=>setEmail(e.target.value)} required
+            style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:5,padding:"9px 10px",
+              color:C.bright,fontFamily:"'Courier New', monospace",fontSize:11,marginBottom:8}} />
+          <input type="password" placeholder="password" value={pass} onChange={e=>setPass(e.target.value)} required
+            style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:5,padding:"9px 10px",
+              color:C.bright,fontFamily:"'Courier New', monospace",fontSize:11,marginBottom:8}} />
+          {error && <div style={{color:C.red,fontSize:10,marginBottom:8}}>{error}</div>}
+          <button type="submit" disabled={loading}
+            style={{...btn(C.accent, loading),width:"100%",padding:"10px",fontSize:12,marginBottom:8}}>
+            {loading ? "..." : mode==="login" ? "SIGN IN" : "CREATE ACCOUNT"}
+          </button>
+        </form>
+        <div style={{display:"flex",justifyContent:"space-between"}}>
+          <button onClick={()=>{setMode(m=>m==="login"?"signup":"login");setError("");}}
+            style={{background:"none",border:"none",color:C.muted,fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>
+            {mode==="login"?"New? Create account →":"← Back to sign in"}
+          </button>
+          <button onClick={onClose}
+            style={{background:"none",border:"none",color:C.muted,fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>
+            cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   PAYWALL MODAL
+═══════════════════════════════════════════════ */
+function PaywallModal({ user, onLogin }) {
+  function openStripe() {
+    const url = `${STRIPE_PAYMENT_LINK}?client_reference_id=${user.id}&prefilled_email=${encodeURIComponent(user.email)}`;
+    window.open(url, "_blank");
+  }
+  return (
+    <div style={{...panel,textAlign:"center",padding:28,marginTop:16}}>
+      <div style={{fontSize:28,marginBottom:12}}>🔒</div>
+      <div style={{fontSize:14,fontWeight:700,color:C.bright,marginBottom:8}}>Full Access Required</div>
+      <div style={{fontSize:10,color:C.muted,lineHeight:1.6,marginBottom:20}}>
+        Unlock <strong style={{color:C.accent}}>Exam Mode</strong> (496 practice questions, timed simulation) and{" "}
+        <strong style={{color:C.accent}}>PBQ Labs</strong> (6 interactive performance-based labs).<br/><br/>
+        One-time purchase. No subscription. Yours forever.
+      </div>
+      {user
+        ? <button onClick={openStripe} style={{...btn(C.green),width:"100%",padding:"11px",fontSize:13}}>
+            Unlock Full Access — $19.99
+          </button>
+        : <button onClick={onLogin} style={{...btn(C.accent),width:"100%",padding:"11px",fontSize:13}}>
+            Sign In to Purchase
+          </button>
+      }
+      <div style={{fontSize:9,color:C.muted,marginTop:10}}>Secure checkout via Stripe · Instant access after payment</div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    ROOT APP
 ═══════════════════════════════════════════════ */
 function App(){
-  const [tab,setTab]=useState("study");
-  const tabs=[{id:"study",label:"STUDY",icon:"📚"},{id:"pbq",label:"PBQ LAB",icon:"⚡"},{id:"exam",label:"EXAM",icon:"🎯"}];
+  const [tab, setTab]           = useState("study");
+  const [user, setUser]         = useState(null);
+  const [isPaid, setIsPaid]     = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  const tabs = [
+    {id:"study", label:"STUDY",   icon:"📚"},
+    {id:"pbq",   label:"PBQ LAB", icon:"⚡"},
+    {id:"exam",  label:"EXAM",    icon:"🎯"},
+  ];
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) fetchProfile(session.user.id);
+      else setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) fetchProfile(session.user.id);
+      else { setIsPaid(false); setAuthLoading(false); }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function fetchProfile(userId) {
+    const { data } = await supabase.from("profiles").select("is_paid").eq("id", userId).single();
+    setIsPaid(data?.is_paid ?? false);
+    setAuthLoading(false);
+  }
+
+  function handleTabClick(t) {
+    const locked = !isPaid && (t.id === "pbq" || t.id === "exam");
+    if (locked) { setTab(t.id); return; } // show PaywallModal in content area
+    setTab(t.id);
+  }
+
+  function renderContent() {
+    if (authLoading) return <div style={{textAlign:"center",color:C.muted,paddingTop:40,fontSize:11}}>loading...</div>;
+    if (tab === "study") return <StudyApp/>;
+    if (!isPaid) return <PaywallModal user={user} onLogin={()=>setShowAuth(true)}/>;
+    if (tab === "pbq")  return <PBQApp/>;
+    return <ExamApp/>;
+  }
+
   return(
     <div style={{minHeight:"100vh",background:C.bg,color:C.text,fontFamily:"'Courier New', monospace",paddingBottom:80}}>
       {/* Header */}
@@ -1024,23 +1166,42 @@ function App(){
           <div style={{fontSize:14,fontWeight:700,background:"linear-gradient(90deg,#00f5c4,#38bdf8)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>
             SEC+ SY0-701
           </div>
-          <div style={{fontSize:9,color:C.muted}}>CompTIA Study App</div>
+          {/* User badge */}
+          {authLoading ? null : user
+            ? <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{...tag(isPaid?C.green:C.yellow)}}>{isPaid?"PRO":"FREE"}</span>
+                <button onClick={()=>supabase.auth.signOut()}
+                  style={{background:"none",border:"none",color:C.muted,fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>
+                  sign out
+                </button>
+              </div>
+            : <button onClick={()=>setShowAuth(true)}
+                style={{...btn(C.accent),padding:"5px 10px",fontSize:9}}>SIGN IN</button>
+          }
         </div>
       </div>
       {/* Content */}
       <div style={{padding:"14px 16px"}}>
-        {tab==="study"?<StudyApp/>:tab==="pbq"?<PBQApp/>:<ExamApp/>}
+        {renderContent()}
       </div>
       {/* Bottom Nav */}
       <div style={{position:"fixed",bottom:0,left:0,right:0,background:C.panel,borderTop:`1px solid ${C.border}`,display:"flex",padding:"8px 0 12px"}}>
-        {tabs.map(t=>(
-          <button key={t.id} onClick={()=>setTab(t.id)}
-            style={{flex:1,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",padding:"6px 0"}}>
-            <div style={{fontSize:18,marginBottom:2}}>{t.icon}</div>
-            <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.08em",color:tab===t.id?C.accent:C.muted}}>{t.label}</div>
-          </button>
-        ))}
+        {tabs.map(t=>{
+          const locked = !isPaid && (t.id==="pbq" || t.id==="exam");
+          return (
+            <button key={t.id} onClick={()=>handleTabClick(t)}
+              style={{flex:1,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",padding:"6px 0"}}>
+              <div style={{fontSize:18,marginBottom:2}}>{locked?"🔒":t.icon}</div>
+              <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.08em",
+                color: locked ? C.muted : tab===t.id ? C.accent : C.muted}}>
+                {t.label}
+              </div>
+            </button>
+          );
+        })}
       </div>
+      {/* Auth modal */}
+      {showAuth && <AuthModal onClose={()=>setShowAuth(false)}/>}
     </div>
   );
 }
