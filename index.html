@@ -1109,6 +1109,73 @@ function PaywallModal({ user, onLogin }) {
 }
 
 /* ═══════════════════════════════════════════════
+   INSTALL BANNER
+═══════════════════════════════════════════════ */
+function InstallBanner() {
+  const [dismissed, setDismissed] = useState(() => !!localStorage.getItem("installDismissed"));
+  const [showModal, setShowModal] = useState(false);
+
+  function dismiss(e) {
+    e.stopPropagation();
+    localStorage.setItem("installDismissed", "1");
+    setDismissed(true);
+  }
+
+  if (dismissed) return null;
+
+  return (
+    <>
+      <div onClick={() => setShowModal(true)}
+        style={{background:`${C.accent}12`,borderBottom:`1px solid ${C.accent}33`,
+          padding:"8px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:14}}>📲</span>
+          <span style={{fontSize:10,color:C.accent,fontWeight:700,letterSpacing:"0.05em"}}>
+            ADD TO HOME SCREEN — works like a real app
+          </span>
+        </div>
+        <button onClick={dismiss}
+          style={{background:"none",border:"none",color:C.muted,fontSize:14,cursor:"pointer",lineHeight:1,padding:"0 2px"}}>
+          ×
+        </button>
+      </div>
+      {showModal && (
+        <div style={{position:"fixed",inset:0,background:"rgba(8,12,20,0.85)",zIndex:100,display:"flex",alignItems:"flex-end"}}
+          onClick={() => setShowModal(false)}>
+          <div style={{...panel,width:"100%",borderRadius:"12px 12px 0 0",padding:24}}
+            onClick={e => e.stopPropagation()}>
+            <div style={{fontSize:13,fontWeight:700,color:C.bright,marginBottom:16}}>Install as App</div>
+
+            <div style={{marginBottom:16}}>
+              <div style={{...tag(C.accent),display:"inline-block",marginBottom:8}}>iPhone / iPad</div>
+              <div style={{fontSize:11,color:C.text,lineHeight:1.7}}>
+                1. Tap the <span style={{color:C.accent}}>Share</span> button (box with arrow) in Safari<br/>
+                2. Scroll down and tap <span style={{color:C.accent}}>"Add to Home Screen"</span><br/>
+                3. Tap <span style={{color:C.accent}}>Add</span> — done!
+              </div>
+            </div>
+
+            <div style={{marginBottom:20}}>
+              <div style={{...tag(C.green),display:"inline-block",marginBottom:8}}>Android</div>
+              <div style={{fontSize:11,color:C.text,lineHeight:1.7}}>
+                1. Tap the <span style={{color:C.green}}>⋮ menu</span> in Chrome (top right)<br/>
+                2. Tap <span style={{color:C.green}}>"Add to Home Screen"</span> or <span style={{color:C.green}}>"Install app"</span><br/>
+                3. Tap <span style={{color:C.green}}>Install</span> — done!
+              </div>
+            </div>
+
+            <button onClick={() => setShowModal(false)}
+              style={{...btn(C.muted),width:"100%",padding:"9px",fontSize:11}}>
+              CLOSE
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    ROOT APP
 ═══════════════════════════════════════════════ */
 function App(){
@@ -1180,6 +1247,7 @@ function App(){
           }
         </div>
       </div>
+      <InstallBanner/>
       {/* Content */}
       <div style={{padding:"14px 16px"}}>
         {renderContent()}
